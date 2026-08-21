@@ -1,0 +1,18 @@
+# Ethiopian Second-Hand Marketplace
+
+Two codebases only: `web/` (Next.js 14, no secret keys) and `backend/` (Node/Express, holds all keys).
+
+## Hard rules
+- Never put API secrets (Chapa, Cloudinary, JWT_SECRET, DB URL) in `web/`.
+- Every API response must use `{ success, data, message, error? }`.
+- Mobile-first: every page must work cleanly at 375px width.
+- Stay inside the owning folder for the current task; do not refactor unrelated code.
+- Keep `.env` gitignored. Check this every change that touches config.
+- Prefer TypeScript strict typing. Mirror shared types between `backend/src/types` and `web/types`.
+
+## Stack
+- Backend: Express + TypeScript + Prisma + PostgreSQL + Socket.io + JWT + bcrypt + Cloudinary + Chapa
+- Frontend: Next.js 14 App Router + Tailwind + TypeScript
+
+## API base
+Backend runs on PORT from env (default 4000). Frontend uses `NEXT_PUBLIC_API_URL`.

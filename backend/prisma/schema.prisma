@@ -1,0 +1,207 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  buyer
+  seller
+  admin
+}
+
+enum ListingCondition {
+  new
+  like_new
+  good
+  fair
+}
+
+enum ListingStatus {
+  active
+  sold
+  removed
+}
+
+enum TransactionStatus {
+  pending
+  held
+  released
+  refunded
+  failed
+}
+
+enum ReportTargetType {
+  listing
+  user
+}
+
+enum ReportStatus {
+  open
+  resolved
+  dismissed
+}
+
+enum VerificationStatus {
+  pending
+  approved
+  rejected
+}
+
+enum NotificationType {
+  new_message
+  new_offer
+  listing_sold
+  verification_approved
+  verification_rejected
+  payment_failed
+}
+
+enum MessageType {
+  text
+  offer
+}
+
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  password_hash String
+  phone         String         @unique
+  role          Role
+  is_verified   Boolean        @default(false)
+  created_at    DateTime       @default(now())
+
+  listings             Listing[]       @relation("SellerListings")
+  sentMessages         Message[]       @relation("SentMessages")
+  receivedMessages     Message[]       @relation("ReceivedMessages")
+  buyerTransactions    Transaction[]   @relation("BuyerTransactions")
+  sellerTransactions   Transaction[]   @relation("SellerTransactions")
+  reports              Report[]
+  verification         Verification?
+  notifications        Notification[]
+
+  @@index([role])
+}
+
+model Category {
+  id        String     @id @default(uuid())
+  name      String
+  parent_id String?
+  parent    Category?  @relation("CategoryTree", fields: [parent_id], references: [id], onDelete: SetNull)
+  children  Category[] @relation("CategoryTree")
+  listings  Listing[]
+}
+
+model Listing {
+  id          String           @id @default(uuid())
+  seller_id   String
+  title       String
+  description String
+  price       Decimal          @db.Decimal(12, 2)
+  condition   ListingCondition
+  category_id String
+  location    String
+  status      ListingStatus    @default(active)
+  view_count  Int              @default(0)
+  created_at  DateTime         @default(now())
+
+  seller       User          @relation("SellerListings", fields: [seller_id], references: [id], onDelete: Cascade)
+  category     Category      @relation(fields: [category_id], references: [id])
+  images       Image[]
+  messages     Message[]
+  transactions Transaction[]
+
+  @@index([category_id])
+  @@index([price])
+  @@index([status])
+}
+
+model Image {
+  id         String  @id @default(uuid())
+  listing_id String
+  url        String
+  is_primary Boolean @default(false)
+  listing    Listing @relation(fields: [listing_id], references: [id], onDelete: Cascade)
+}
+
+model Message {
+  id           String      @id @default(uuid())
+  sender_id    String
+  receiver_id  String
+  listing_id   String
+  content      String
+  type         MessageType @default(text)
+  offer_amount Decimal?    @db.Decimal(12, 2)
+  read_at      DateTime?
+  created_at   DateTime    @default(now())
+
+  sender   User    @relation("SentMessages", fields: [sender_id], references: [id])
+  receiver User    @relation("ReceivedMessages", fields: [receiver_id], references: [id])
+  listing  Listing @relation(fields: [listing_id], references: [id])
+
+  @@index([sender_id, receiver_id])
+}
+
+model Transaction {
+  id         String            @id @default(uuid())
+  listing_id String
+  buyer_id   String
+  seller_id  String
+  amount     Decimal           @db.Decimal(12, 2)
+  chapa_ref  String            @unique
+  status     TransactionStatus @default(pending)
+  created_at DateTime          @default(now())
+
+  listing Listing @relation(fields: [listing_id], references: [id])
+  buyer   User    @relation("BuyerTransactions", fields: [buyer_id], references: [id])
+  seller  User    @relation("SellerTransactions", fields: [seller_id], references: [id])
+
+  @@index([status])
+}
+
+model Report {
+  id          String           @id @default(uuid())
+  reporter_id String
+  target_type ReportTargetType
+  target_id   String
+  reason      String
+  status      ReportStatus     @default(open)
+  created_at  DateTime         @default(now())
+
+  reporter User @relation(fields: [reporter_id], references: [id])
+
+  @@index([status])
+  @@index([target_type])
+}
+
+model Verification {
+  id            String             @id @default(uuid())
+  user_id       String             @unique
+  id_image_url  String
+  face_image_url String
+  status        VerificationStatus @default(pending)
+  reviewed_at   DateTime?
+  created_at    DateTime           @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model Notification {
+  id         String           @id @default(uuid())
+  user_id    String
+  type       NotificationType
+  message    String
+  is_read    Boolean          @default(false)
+  created_at DateTime         @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, is_read])
+}
