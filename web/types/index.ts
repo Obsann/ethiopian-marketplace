@@ -7,7 +7,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  phone: string;
+  phone: string | null;
   role: UserRole;
   is_verified: boolean;
   created_at: string;
@@ -51,6 +51,30 @@ export interface Transaction {
   chapa_ref: string;
   status: TransactionStatus;
   created_at: string;
+  listing?: { id: string; title: string; status: string };
+}
+
+export interface Notification {
+  id: string;
+  type:
+    | 'new_message'
+    | 'new_offer'
+    | 'listing_sold'
+    | 'verification_approved'
+    | 'verification_rejected'
+    | 'payment_failed'
+    | 'payment_refunded'
+    | 'funds_released';
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface ConversationPreview {
+  listing_id: string;
+  listing_title: string;
+  other_user: { id: string; name: string };
+  last_message: Message;
 }
 
 export interface SearchFilters {

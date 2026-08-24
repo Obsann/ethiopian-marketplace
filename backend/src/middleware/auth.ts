@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { AuthTokenPayload, UserRole } from '../types';
 import { sendError } from '../utils/response';
 import { messages } from '../utils/messages';
+import { readSessionToken } from '../utils/sessionCookie';
 
 export interface AuthRequest extends Request {
   user?: AuthTokenPayload;
@@ -13,12 +14,10 @@ export function authenticate(
   res: Response,
   next: NextFunction
 ): Response | void {
-  const header = req.headers.authorization;
-  if (!header?.startsWith('Bearer ')) {
+  const token = readSessionToken(req);
+  if (!token) {
     return sendError(res, messages.unauthorized, 401);
   }
-
-  const token = header.slice(7);
   try {
     const secret = process.env.JWT_SECRET;
     if (!secret) {

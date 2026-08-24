@@ -45,7 +45,7 @@ export default function SellPage() {
 
   async function publish(e: FormEvent) {
     e.preventDefault();
-    if (!token) return;
+    if (!user) return;
     setBusy(true);
     setError('');
     try {

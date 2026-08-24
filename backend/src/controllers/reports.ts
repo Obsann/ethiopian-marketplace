@@ -58,8 +58,33 @@ export async function listReports(req: AuthRequest, res: Response) {
     }),
   ]);
 
+  const listingIds = items.filter((i) => i.target_type === 'listing').map((i) => i.target_id);
+  const userIds = items.filter((i) => i.target_type === 'user').map((i) => i.target_id);
+  const [listings, users] = await Promise.all([
+    listingIds.length
+      ? prisma.listing.findMany({
+          where: { id: { in: listingIds } },
+          select: { id: true, title: true },
+        })
+      : [],
+    userIds.length
+      ? prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, name: true, email: true },
+        })
+      : [],
+  ]);
+  const listingMap = new Map(listings.map((l) => [l.id, l]));
+  const userMap = new Map(users.map((u) => [u.id, u]));
+
   return sendSuccess(res, {
-    items,
+    items: items.map((item) => ({
+      ...item,
+      target:
+        item.target_type === 'listing'
+          ? listingMap.get(item.target_id) ?? null
+          : userMap.get(item.target_id) ?? null,
+    })),
     pagination: { page, limit, total, pages: Math.ceil(total / limit) },
   });
 }

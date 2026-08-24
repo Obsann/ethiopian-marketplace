@@ -36,7 +36,10 @@ export function ListingCard({ listing }: { listing: Listing }) {
         <p className="text-base font-bold text-brand-700">
           {listing.price.toLocaleString()} ETB
         </p>
-        <p className="text-xs text-ink/60">{listing.location}</p>
+        <p className="text-xs text-ink/60">
+          {listing.location}
+          {listing.seller?.is_verified ? ' · Verified seller' : ''}
+        </p>
       </div>
     </Link>
   );

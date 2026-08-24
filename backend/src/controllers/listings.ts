@@ -5,6 +5,7 @@ import prisma from '../models/prisma';
 import { AuthRequest } from '../middleware/auth';
 import { sendError, sendSuccess } from '../utils/response';
 import { uploadImageBuffer } from '../utils/cloudinary';
+import { isLikelyImageBuffer } from '../utils/kycStorage';
 import { messages } from '../utils/messages';
 
 const createSchema = z.object({
@@ -14,6 +15,15 @@ const createSchema = z.object({
   condition: z.enum(['new', 'like_new', 'good', 'fair']),
   category_id: z.string().uuid(),
   location: z.string().min(2),
+});
+
+const updateSchema = z.object({
+  title: z.string().min(3).optional(),
+  description: z.string().min(10).optional(),
+  price: z.coerce.number().positive().optional(),
+  condition: z.enum(['new', 'like_new', 'good', 'fair']).optional(),
+  location: z.string().min(2).optional(),
+  status: z.enum(['active', 'removed']).optional(),
 });
 
 function mapListing(listing: {
@@ -28,7 +38,7 @@ function mapListing(listing: {
   status: string;
   created_at: Date;
   images?: { url: string; is_primary: boolean }[];
-  seller?: { id: string; name: string; is_verified: boolean };
+  seller?: { id: string; name: string; is_verified: boolean; phone?: string };
   view_count?: number;
 }) {
   const images = (listing.images ?? [])
@@ -46,7 +56,13 @@ function mapListing(listing: {
     status: listing.status,
     images,
     created_at: listing.created_at.toISOString(),
-    seller: listing.seller,
+    seller: listing.seller
+      ? {
+          id: listing.seller.id,
+          name: listing.seller.name,
+          is_verified: listing.seller.is_verified,
+        }
+      : undefined,
     view_count: listing.view_count ?? 0,
     primary_image: images[0] ?? null,
   };
@@ -75,6 +91,9 @@ export async function createListing(req: AuthRequest, res: Response) {
 
   const urls: string[] = [];
   for (const file of files.slice(0, 5)) {
+    if (!isLikelyImageBuffer(file.buffer)) {
+      return sendError(res, 'Each photo must be a JPEG, PNG, or WebP image', 400);
+    }
     urls.push(await uploadImageBuffer(file.buffer));
   }
 
@@ -95,9 +114,19 @@ export async function createListing(req: AuthRequest, res: Response) {
   return sendSuccess(res, mapListing(listing), 'Listing created', 201);
 }
 
+function toSafeSearchQuery(raw: string): string | null {
+  const terms = raw
+    .replace(/['&|!:*()<>]/g, ' ')
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 2);
+  if (!terms.length) return null;
+  return terms.map((t) => `${t}:*`).join(' & ');
+}
+
 export async function getListings(req: AuthRequest, res: Response) {
   const page = Math.max(1, Number(req.query.page) || 1);
-  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
   const skip = (page - 1) * limit;
 
   const where: Prisma.ListingWhereInput = { status: 'active' };
@@ -116,11 +145,18 @@ export async function getListings(req: AuthRequest, res: Response) {
   }
 
   const query = req.query.query ? String(req.query.query).trim() : '';
+  const ilike: Prisma.ListingWhereInput[] = query
+    ? [
+        { title: { contains: query, mode: 'insensitive' } },
+        { description: { contains: query, mode: 'insensitive' } },
+      ]
+    : [];
+  const search = query ? toSafeSearchQuery(query) : null;
   if (query) {
-    where.OR = [
-      { title: { contains: query, mode: 'insensitive' } },
-      { description: { contains: query, mode: 'insensitive' } },
-    ];
+    const fts: Prisma.ListingWhereInput[] = search
+      ? [{ title: { search } }, { description: { search } }]
+      : [];
+    where.OR = [...fts, ...ilike];
   }
 
   const sort = String(req.query.sort || 'newest');
@@ -128,19 +164,33 @@ export async function getListings(req: AuthRequest, res: Response) {
   if (sort === 'price_asc') orderBy = { price: 'asc' };
   if (sort === 'price_desc') orderBy = { price: 'desc' };
 
-  const [total, rows] = await Promise.all([
-    prisma.listing.count({ where }),
-    prisma.listing.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy,
-      include: {
-        images: true,
-        seller: { select: { id: true, name: true, is_verified: true } },
-      },
-    }),
-  ]);
+  const include = {
+    images: true,
+    seller: { select: { id: true, name: true, is_verified: true } },
+  } as const;
+
+  async function run(filter: Prisma.ListingWhereInput) {
+    return Promise.all([
+      prisma.listing.count({ where: filter }),
+      prisma.listing.findMany({
+        where: filter,
+        skip,
+        take: limit,
+        orderBy,
+        include,
+      }),
+    ]);
+  }
+
+  let total: number;
+  let rows: Awaited<ReturnType<typeof run>>[1];
+  try {
+    [total, rows] = await run(where);
+  } catch (err) {
+    if (!query || ilike.length === 0) throw err;
+    const fallback = { ...where, OR: ilike };
+    [total, rows] = await run(fallback);
+  }
 
   return sendSuccess(res, {
     items: rows.map(mapListing),
@@ -154,7 +204,7 @@ export async function getListingById(req: AuthRequest, res: Response) {
     where: { id },
     include: {
       images: true,
-      seller: { select: { id: true, name: true, is_verified: true, phone: true } },
+      seller: { select: { id: true, name: true, is_verified: true } },
       category: true,
     },
   });
@@ -167,7 +217,7 @@ export async function getListingById(req: AuthRequest, res: Response) {
     data: { view_count: { increment: 1 } },
     include: {
       images: true,
-      seller: { select: { id: true, name: true, is_verified: true, phone: true } },
+      seller: { select: { id: true, name: true, is_verified: true } },
       category: true,
     },
   });
@@ -183,13 +233,29 @@ export async function updateListing(req: AuthRequest, res: Response) {
     return sendError(res, messages.forbidden, 403);
   }
 
-  const data: Prisma.ListingUpdateInput = {};
-  if (req.body.title) data.title = req.body.title;
-  if (req.body.description) data.description = req.body.description;
-  if (req.body.price) data.price = Number(req.body.price);
-  if (req.body.condition) data.condition = req.body.condition;
-  if (req.body.location) data.location = req.body.location;
-  if (req.body.status) data.status = req.body.status;
+  const parsed = updateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return sendError(res, 'Invalid listing data', 400, parsed.error.message);
+  }
+
+  const data: Prisma.ListingUpdateInput = { ...parsed.data };
+
+  if (parsed.data.status === 'active' && listing.status !== 'active') {
+    const locked = await prisma.transaction.findFirst({
+      where: {
+        listing_id: listing.id,
+        status: { in: ['held', 'released'] },
+      },
+      select: { id: true },
+    });
+    if (locked || listing.status === 'sold') {
+      return sendError(
+        res,
+        'This listing has a held or completed sale and cannot be reactivated',
+        409
+      );
+    }
+  }
 
   const updated = await prisma.listing.update({
     where: { id: listing.id },

@@ -13,30 +13,39 @@ export default function VerifyPage() {
   const [idImage, setIdImage] = useState<File | null>(null);
   const [faceImage, setFaceImage] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const canSubmit = user?.role === 'seller' || user?.role === 'admin';
 
   useEffect(() => {
-    if (!isLoading && !user) router.replace('/auth/login?next=/verify');
-  }, [user, isLoading, router]);
+    if (isLoading) return;
+    if (!user) {
+      router.replace('/auth/login?next=/verify');
+      return;
+    }
+    if (!canSubmit) router.replace('/');
+  }, [user, isLoading, router, canSubmit]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!token || !idImage || !faceImage) return;
+    if (!user || !idImage || !faceImage) return;
     setBusy(true);
+    setError('');
+    setSuccess('');
     try {
       const body = new FormData();
       body.append('id_image', idImage);
       body.append('face_image', faceImage);
       await api('/api/verifications/submit', { method: 'POST', token, body });
-      setMsg('Submitted. An admin will review your documents soon.');
+      setSuccess('Submitted. An admin will review your documents soon.');
     } catch (err) {
-      setMsg(err instanceof Error ? err.message : 'Upload failed');
+      setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setBusy(false);
     }
   }
 
-  if (isLoading) {
+  if (isLoading || !canSubmit) {
     return (
       <div className="flex justify-center py-16">
         <Spinner />
@@ -59,7 +68,8 @@ export default function VerifyPage() {
           <span className="font-medium">Face image</span>
           <input type="file" accept="image/*" required onChange={(e) => setFaceImage(e.target.files?.[0] || null)} />
         </label>
-        {msg && <p className="text-sm text-brand-700">{msg}</p>}
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        {success && <p className="text-sm text-brand-700">{success}</p>}
         <Button type="submit" loading={busy} className="w-full">
           Submit for review
         </Button>

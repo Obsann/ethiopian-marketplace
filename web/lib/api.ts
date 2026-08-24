@@ -17,6 +17,7 @@ export async function api<T>(
   const { token, headers, ...rest } = options;
   const res = await fetch(`${API_URL}${path}`, {
     ...rest,
+    credentials: 'include',
     headers: {
       ...(rest.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

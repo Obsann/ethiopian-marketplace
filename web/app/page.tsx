@@ -9,16 +9,16 @@ import { ListingCard } from '@/components/ListingCard';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 
-const CATEGORY_ICONS: Record<string, string> = {
-  Electronics: '⚡',
-  Clothing: '👗',
-  Furniture: '🪑',
-  Books: '📚',
-  Vehicles: '🛵',
-  Kitchen: '🍲',
-  Tools: '🔧',
-  Other: '📦',
-};
+const FALLBACK_CATEGORIES = [
+  'Electronics',
+  'Clothing',
+  'Furniture',
+  'Books',
+  'Vehicles',
+  'Kitchen',
+  'Tools',
+  'Other',
+];
 
 export default function HomePage() {
   const router = useRouter();
@@ -50,21 +50,14 @@ export default function HomePage() {
   return (
     <div className="space-y-12">
       <section className="relative overflow-hidden rounded-2xl bg-brand-900 px-5 py-12 text-white sm:px-10 sm:py-16">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-30"
-          style={{
-            backgroundImage:
-              'url(https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=1600&q=80)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(232,163,23,0.25),transparent_45%),radial-gradient(circle_at_90%_10%,rgba(255,255,255,0.08),transparent_40%)]" />
         <div className="relative z-10 mx-auto max-w-2xl space-y-5 text-center">
           <p className="font-display text-3xl font-bold tracking-tight sm:text-5xl">
             SuqET
           </p>
           <h1 className="text-balance text-lg text-white/90 sm:text-xl">
-            Ethiopia&apos;s trusted second-hand marketplace — verified sellers, escrow payments.
+            Ethiopia&apos;s second-hand marketplace. Browse locally, message sellers, and pay through
+            the checkout we provide.
           </h1>
           <form onSubmit={onSearch} className="flex flex-col gap-2 sm:flex-row">
             <input
@@ -86,15 +79,15 @@ export default function HomePage() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {(categories.length
             ? categories
-            : Object.keys(CATEGORY_ICONS).map((name) => ({ id: name, name }))
+            : FALLBACK_CATEGORIES.map((name) => ({ id: name, name }))
           ).map((cat) => (
             <Link
               key={cat.id}
               href={`/listings?category_id=${cat.id}`}
               className="flex flex-col items-center gap-2 rounded-lg border border-black/8 bg-white/80 px-3 py-5 text-center transition hover:border-brand-500/50"
             >
-              <span className="text-2xl" aria-hidden>
-                {CATEGORY_ICONS[cat.name] || '📦'}
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-sm font-semibold text-brand-700" aria-hidden>
+                {cat.name.slice(0, 1)}
               </span>
               <span className="text-sm font-medium">{cat.name}</span>
             </Link>

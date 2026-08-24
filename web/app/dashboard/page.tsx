@@ -32,6 +32,13 @@ interface DashboardData {
     sender: { id: string; name: string };
     listing: { id: string; title: string };
   }[];
+  held_sales: {
+    id: string;
+    amount: number;
+    status: string;
+    listing: { id: string; title: string };
+    created_at: string;
+  }[];
 }
 
 export default function DashboardPage() {
@@ -40,21 +47,43 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState('');
+  const canManage = user?.role === 'seller' || user?.role === 'admin';
 
   useEffect(() => {
-    if (!isLoading && !user) router.replace('/auth/login?next=/dashboard');
-  }, [user, isLoading, router]);
+    if (isLoading) return;
+    if (!user) {
+      router.replace('/auth/login?next=/dashboard');
+      return;
+    }
+    if (!canManage) router.replace('/');
+  }, [user, isLoading, router, canManage]);
 
   useEffect(() => {
-    if (!token) return;
-    api<DashboardData>('/api/dashboard', { token })
+    if (!user || !canManage) return;
+    api<DashboardData>('/api/dashboard', token ? { token } : {})
       .then((r) => setData(r.data))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [user, token, canManage]);
+
+  async function releaseSale(id: string) {
+    if (!user) return;
+    setBusyId(id);
+    try {
+      await api(`/api/payments/release/${id}`, { method: 'POST', token });
+      setData((d) =>
+        d ? { ...d, held_sales: d.held_sales.filter((s) => s.id !== id) } : d
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not release');
+    } finally {
+      setBusyId('');
+    }
+  }
 
   async function removeListing(id: string) {
-    if (!token || !confirm('Remove this listing?')) return;
+    if (!user || !confirm('Remove this listing?')) return;
     await api(`/api/listings/${id}`, { method: 'DELETE', token });
     setData((d) =>
       d
@@ -70,7 +99,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (isLoading || loading) {
+  if (isLoading || !canManage || loading) {
     return (
       <div className="flex justify-center py-16">
         <Spinner />
@@ -78,8 +107,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (error) return <p className="text-red-600">{error}</p>;
-  if (!data) return null;
+  if (!data) return error ? <p className="text-red-600">{error}</p> : null;
 
   return (
     <div className="space-y-8">
@@ -92,6 +120,8 @@ export default function DashboardPage() {
           <Button>New listing</Button>
         </Link>
       </div>
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
       {!data.is_verified && (
         <div className="rounded-lg border border-accent-400/40 bg-accent-400/10 px-4 py-3 text-sm">
@@ -166,13 +196,41 @@ export default function DashboardPage() {
       </section>
 
       <section className="space-y-3">
+        <h2 className="font-display text-xl font-semibold">Held payments</h2>
+        <ul className="space-y-2">
+          {(data.held_sales ?? []).map((s) => (
+            <li
+              key={s.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-black/8 bg-white/90 px-4 py-3 text-sm"
+            >
+              <div>
+                <Link href={`/listings/${s.listing.id}`} className="font-medium hover:underline">
+                  {s.listing.title}
+                </Link>
+                <p className="text-ink/70">{s.amount.toLocaleString()} ETB held</p>
+              </div>
+              <Button loading={busyId === s.id} onClick={() => releaseSale(s.id)}>
+                Confirm delivery
+              </Button>
+            </li>
+          ))}
+          {(data.held_sales ?? []).length === 0 && (
+            <p className="text-sm text-ink/60">No held payments.</p>
+          )}
+        </ul>
+      </section>
+
+      <section className="space-y-3">
         <h2 className="font-display text-xl font-semibold">Recent messages</h2>
         <ul className="space-y-2">
           {data.recent_messages.map((m) => (
             <li key={m.id} className="rounded-lg border border-black/8 bg-white/90 px-4 py-3 text-sm">
-              <p className="font-medium">
+              <Link
+                href={`/listings/${m.listing.id}?with=${m.sender.id}`}
+                className="font-medium hover:underline"
+              >
                 {m.sender.name} · {m.listing.title}
-              </p>
+              </Link>
               <p className="text-ink/70">{m.content}</p>
             </li>
           ))}

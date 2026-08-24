@@ -1,6 +1,9 @@
 import 'dotenv/config';
+import fs from 'fs';
+import path from 'path';
 import bcrypt from 'bcryptjs';
 import prisma from '../src/models/prisma';
+import { isCloudinaryConfigured, uploadImageBuffer } from '../src/utils/cloudinary';
 
 const CATEGORIES = [
   'Electronics',
@@ -13,15 +16,69 @@ const CATEGORIES = [
   'Other',
 ];
 
-const LISTING_IMAGES = [
-  'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800',
-  'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800',
-  'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800',
-  'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800',
-  'https://images.unsplash.com/photo-1560343090-f0409e92791a?w=800',
-];
+const PLACEHOLDER_DIR = path.join(process.cwd(), 'public', 'placeholders');
+const PLACEHOLDER_COLORS = ['#C2410C', '#0F766E', '#7C3AED', '#B45309', '#1D4ED8'];
+
+function publicBaseUrl(): string {
+  return (process.env.BACKEND_PUBLIC_URL || `http://localhost:${process.env.PORT || 4000}`).replace(
+    /\/$/,
+    ''
+  );
+}
+
+function listingPlaceholderSvg(label: string, color: string): Buffer {
+  const safe = label.replace(/[<>&]/g, '');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="${color}"/>
+  <text x="400" y="300" text-anchor="middle" fill="#ffffff" font-family="system-ui,sans-serif" font-size="32">${safe}</text>
+  <text x="400" y="340" text-anchor="middle" fill="#ffffff" font-family="system-ui,sans-serif" font-size="18" opacity="0.85">SuqET seed listing</text>
+</svg>`;
+  return Buffer.from(svg);
+}
+
+function ensureLocalPlaceholderUrls(labels: string[]): string[] {
+  fs.mkdirSync(PLACEHOLDER_DIR, { recursive: true });
+  return labels.map((label, i) => {
+    const filename = `listing-${i + 1}.svg`;
+    fs.writeFileSync(
+      path.join(PLACEHOLDER_DIR, filename),
+      listingPlaceholderSvg(label, PLACEHOLDER_COLORS[i % PLACEHOLDER_COLORS.length])
+    );
+    return `${publicBaseUrl()}/placeholders/${filename}`;
+  });
+}
+
+async function resolveListingImageUrls(labels: string[]): Promise<string[]> {
+  const localUrls = ensureLocalPlaceholderUrls(labels);
+  if (!isCloudinaryConfigured()) {
+    console.log('Seed images: local placeholders (Cloudinary not set).');
+    return localUrls;
+  }
+  try {
+    const uploaded: string[] = [];
+    for (let i = 0; i < labels.length; i++) {
+      const buf = listingPlaceholderSvg(labels[i], PLACEHOLDER_COLORS[i % PLACEHOLDER_COLORS.length]);
+      uploaded.push(await uploadImageBuffer(buf, 'ethiopian-marketplace/seed'));
+    }
+    console.log('Seed images: uploaded to Cloudinary.');
+    return uploaded;
+  } catch (err) {
+    console.warn(
+      'Cloudinary seed upload failed; using local placeholders.',
+      err instanceof Error ? err.message : ''
+    );
+    return localUrls;
+  }
+}
 
 async function main() {
+  if (process.env.NODE_ENV === 'production' && process.env.FORCE_SEED !== 'true') {
+    throw new Error('Refusing to seed in production. Set FORCE_SEED=true to override.');
+  }
+
+  await prisma.oAuthExchangeCode.deleteMany();
+  await prisma.emailVerificationToken.deleteMany();
+  await prisma.passwordResetToken.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.message.deleteMany();
   await prisma.transaction.deleteMany();
@@ -99,6 +156,14 @@ async function main() {
     { title: 'Sofa Set 3-Seater', desc: 'Comfortable fabric sofa, no tears, pickup only.', price: 12000, condition: 'good' as const, cat: 'Furniture', loc: 'Addis Ababa', seller: 0 },
   ];
 
+  const imageUrls = await resolveListingImageUrls([
+    'Phone',
+    'Watch',
+    'Headphones',
+    'Shoes',
+    'Bag',
+  ]);
+
   const listings = [];
   for (let i = 0; i < products.length; i++) {
     const p = products[i];
@@ -114,8 +179,8 @@ async function main() {
         seller_id: sellers[p.seller].id,
         images: {
           create: [
-            { url: LISTING_IMAGES[i % LISTING_IMAGES.length], is_primary: true },
-            { url: LISTING_IMAGES[(i + 1) % LISTING_IMAGES.length], is_primary: false },
+            { url: imageUrls[i % imageUrls.length], is_primary: true },
+            { url: imageUrls[(i + 1) % imageUrls.length], is_primary: false },
           ],
         },
       },
@@ -162,7 +227,7 @@ async function main() {
     data: { status: 'sold' },
   });
 
-  console.log('Seed complete.');
+  console.log('Seed complete. Wipes existing marketplace rows (dev only unless FORCE_SEED=true).');
   console.log('Sellers:', sellers.map((s) => s.email).join(', '));
   console.log('Buyers:', buyers.map((b) => b.email).join(', '));
   console.log('Admin: admin@marketplace.et / Password123!');

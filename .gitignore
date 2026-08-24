@@ -36,6 +36,8 @@ backend/prisma/*.db-journal
 
 # Uploads / temp
 uploads/
+private/
+tmp/
 tmp/
 _extracted/
 

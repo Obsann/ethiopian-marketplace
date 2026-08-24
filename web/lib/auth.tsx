@@ -8,8 +8,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import Cookies from 'js-cookie';
 import { api } from '@/lib/api';
+import { disconnectSocket } from '@/lib/socket';
 import type { User } from '@/types';
 
 interface AuthContextValue {
@@ -17,14 +17,16 @@ interface AuthContextValue {
   token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithToken: (token: string) => Promise<void>;
   register: (payload: {
     name: string;
     email: string;
     phone: string;
     password: string;
     role: 'buyer' | 'seller';
-  }) => Promise<void>;
-  logout: () => void;
+  }) => Promise<{ verifyUrl?: string; message?: string }>;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -34,17 +36,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const saved = Cookies.get('etm_token');
-    if (!saved) {
-      setIsLoading(false);
-      return;
+  const refreshUser = useCallback(async () => {
+    try {
+      const res = await api<{ user: User }>('/api/auth/me', token ? { token } : {});
+      setUser(res.data.user);
+    } catch {
+      setUser(null);
+      setToken(null);
     }
-    setToken(saved);
-    api<{ user: User }>('/api/auth/me', { token: saved })
+  }, [token]);
+
+  useEffect(() => {
+    api<{ user: User }>('/api/auth/me')
       .then((res) => setUser(res.data.user))
       .catch(() => {
-        Cookies.remove('etm_token');
+        setUser(null);
         setToken(null);
       })
       .finally(() => setIsLoading(false));
@@ -55,8 +61,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    Cookies.set('etm_token', res.data.token, { expires: 7 });
     setToken(res.data.token);
+    setUser(res.data.user);
+  }, []);
+
+  const loginWithToken = useCallback(async (nextToken: string) => {
+    const res = await api<{ user: User }>('/api/auth/me', { token: nextToken });
+    setToken(nextToken);
     setUser(res.data.user);
   }, []);
 
@@ -68,25 +79,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password: string;
       role: 'buyer' | 'seller';
     }) => {
-      const res = await api<{ user: User; token: string }>('/api/auth/register', {
+      const res = await api<{ verifyUrl?: string }>('/api/auth/register', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
-      Cookies.set('etm_token', res.data.token, { expires: 7 });
-      setToken(res.data.token);
-      setUser(res.data.user);
+      return { ...res.data, message: res.message };
     },
     []
   );
 
-  const logout = useCallback(() => {
-    Cookies.remove('etm_token');
+  const logout = useCallback(async () => {
+    try {
+      await api('/api/auth/logout', { method: 'POST' });
+    } catch {
+      /* still clear local session */
+    }
+    disconnectSocket();
     setToken(null);
     setUser(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, token, isLoading, login, loginWithToken, register, logout, refreshUser }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -19,6 +19,7 @@ function ListingsContent() {
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const filters = useMemo(
     () => ({
@@ -33,6 +34,21 @@ function ListingsContent() {
     }),
     [searchParams]
   );
+
+  const [queryInput, setQueryInput] = useState(filters.query);
+
+  useEffect(() => {
+    setQueryInput(filters.query);
+  }, [filters.query]);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      if (queryInput === filters.query) return;
+      setParam('query', queryInput);
+    }, 400);
+    return () => window.clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryInput]);
 
   function setParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -53,7 +69,7 @@ function ListingsContent() {
     Object.entries(filters).forEach(([k, v]) => {
       if (v) qs.set(k, v);
     });
-    qs.set('limit', '10');
+    qs.set('limit', '20');
     api<{ items: Listing[]; pagination: Pagination }>(`/api/listings?${qs}`)
       .then((r) => {
         setListings(r.data.items);
@@ -72,13 +88,22 @@ function ListingsContent() {
 
       <Input
         label="Search"
-        value={filters.query}
-        onChange={(e) => setParam('query', e.target.value)}
+        value={queryInput}
+        onChange={(e) => setQueryInput(e.target.value)}
         placeholder="e.g. phone, sofa, helmet"
       />
 
+      <Button
+        type="button"
+        variant="ghost"
+        className="lg:hidden"
+        onClick={() => setFiltersOpen((v) => !v)}
+      >
+        {filtersOpen ? 'Hide filters' : 'Show filters'}
+      </Button>
+
       <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-        <aside className="space-y-4 rounded-lg border border-black/8 bg-white/80 p-4">
+        <aside className={`space-y-4 rounded-lg border border-black/8 bg-white/80 p-4 ${filtersOpen ? 'block' : 'hidden lg:block'}`}>
           <div>
             <label className="mb-1 block text-sm font-medium">Category</label>
             <select

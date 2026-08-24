@@ -1,27 +1,23 @@
 import { Router } from 'express';
-import multer from 'multer';
 import * as listingsController from '../controllers/listings';
 import { authenticate, requireRoles } from '../middleware/auth';
-
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024, files: 5 },
-});
+import { asyncHandler } from '../middleware/asyncHandler';
+import { listingUpload } from '../utils/upload';
 
 const router = Router();
 
-router.get('/categories', listingsController.getCategories);
-router.get('/', listingsController.getListings);
-router.get('/:id', listingsController.getListingById);
+router.get('/categories', asyncHandler(listingsController.getCategories));
+router.get('/', asyncHandler(listingsController.getListings));
+router.get('/:id', asyncHandler(listingsController.getListingById));
 router.post(
   '/',
   authenticate,
   requireRoles('seller', 'admin'),
-  upload.array('images', 5),
-  listingsController.createListing
+  listingUpload.array('images', 5),
+  asyncHandler(listingsController.createListing)
 );
-router.put('/:id', authenticate, listingsController.updateListing);
-router.delete('/:id', authenticate, listingsController.deleteListing);
-router.post('/:id/offer', authenticate, listingsController.makeOffer);
+router.put('/:id', authenticate, asyncHandler(listingsController.updateListing));
+router.delete('/:id', authenticate, asyncHandler(listingsController.deleteListing));
+router.post('/:id/offer', authenticate, asyncHandler(listingsController.makeOffer));
 
 export default router;

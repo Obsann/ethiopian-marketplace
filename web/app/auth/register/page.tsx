@@ -2,14 +2,13 @@
 
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { GoogleSignInButton } from '@/components/GoogleSignInButton';
 
 export default function RegisterPage() {
   const { register } = useAuth();
-  const router = useRouter();
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -20,6 +19,9 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [verifyUrl, setVerifyUrl] = useState('');
+  const [done, setDone] = useState(false);
+  const [doneMessage, setDoneMessage] = useState('');
 
   function update(key: string, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -38,13 +40,38 @@ export default function RegisterPage() {
     setLoading(true);
     setFormError('');
     try {
-      await register(form);
-      router.push('/');
+      const data = await register(form);
+      setVerifyUrl(data.verifyUrl || '');
+      setDoneMessage(data.message || '');
+      setDone(true);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setLoading(false);
     }
+  }
+
+  if (done) {
+    return (
+      <div className="mx-auto max-w-md space-y-4 rounded-xl border border-black/8 bg-white/90 p-5 text-sm">
+        <h1 className="font-display text-2xl font-semibold">Check your email</h1>
+        <p>
+          {doneMessage ||
+            `We sent a confirmation link to ${form.email}. Confirm it before you log in.`}
+        </p>
+        {verifyUrl && (
+          <p>
+            Local dev (SMTP not sending):{' '}
+            <Link href={verifyUrl} className="break-all font-medium text-brand-600 hover:underline">
+              Open confirmation link
+            </Link>
+          </p>
+        )}
+        <Link href="/auth/login" className="inline-block font-medium text-brand-600 hover:underline">
+          Back to log in
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -53,11 +80,7 @@ export default function RegisterPage() {
         <h1 className="font-display text-3xl font-semibold">Create account</h1>
         <p className="mt-1 text-sm text-ink/70">Join Ethiopia&apos;s second-hand marketplace.</p>
       </div>
-      <form onSubmit={onSubmit} className="space-y-4 rounded-xl border border-black/8 bg-white/90 p-5">
-        <Input label="Full name" value={form.name} onChange={(e) => update('name', e.target.value)} error={errors.name} required />
-        <Input label="Email" type="email" value={form.email} onChange={(e) => update('email', e.target.value)} error={errors.email} required />
-        <Input label="Phone" value={form.phone} onChange={(e) => update('phone', e.target.value)} error={errors.phone} placeholder="+2519…" required />
-        <Input label="Password" type="password" value={form.password} onChange={(e) => update('password', e.target.value)} error={errors.password} required />
+      <div className="space-y-4 rounded-xl border border-black/8 bg-white/90 p-5">
         <label className="block space-y-1.5">
           <span className="text-sm font-medium text-ink/80">I want to</span>
           <select
@@ -69,11 +92,18 @@ export default function RegisterPage() {
             <option value="seller">Sell items</option>
           </select>
         </label>
-        {formError && <p className="text-sm text-red-600">{formError}</p>}
-        <Button type="submit" className="w-full" loading={loading}>
-          Sign up
-        </Button>
-      </form>
+        <GoogleSignInButton role={form.role} />
+        <form onSubmit={onSubmit} className="space-y-4">
+          <Input label="Full name" value={form.name} onChange={(e) => update('name', e.target.value)} error={errors.name} required />
+          <Input label="Email" type="email" value={form.email} onChange={(e) => update('email', e.target.value)} error={errors.email} required />
+          <Input label="Phone" value={form.phone} onChange={(e) => update('phone', e.target.value)} error={errors.phone} placeholder="+2519…" required />
+          <Input label="Password" type="password" value={form.password} onChange={(e) => update('password', e.target.value)} error={errors.password} required />
+          {formError && <p className="text-sm text-red-600">{formError}</p>}
+          <Button type="submit" className="w-full" loading={loading}>
+            Sign up
+          </Button>
+        </form>
+      </div>
       <p className="text-center text-sm">
         Already have an account?{' '}
         <Link href="/auth/login" className="font-medium text-brand-600 hover:underline">
