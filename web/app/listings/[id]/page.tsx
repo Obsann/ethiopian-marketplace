@@ -4,6 +4,7 @@ import { FormEvent, Suspense, useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { BadgeCheck, Flag, MapPin, MessageCircle, Pencil, ShoppingBag, Tag } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Listing } from '@/types';
@@ -11,7 +12,15 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
+import { Alert } from '@/components/ui/Alert';
 import { ListingChat } from '@/components/ListingChat';
+
+const conditionTone: Record<string, 'green' | 'amber' | 'gray' | 'blue'> = {
+  new: 'green',
+  like_new: 'green',
+  good: 'amber',
+  fair: 'gray',
+};
 
 function ListingDetail() {
   const { id } = useParams<{ id: string }>();
@@ -97,13 +106,14 @@ function ListingDetail() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20">
+      <div className="flex justify-center py-20" aria-busy="true" aria-label="Loading listing">
         <Spinner />
       </div>
     );
   }
+
   if (error || !listing) {
-    return <p className="text-red-600">{error || 'Listing not found'}</p>;
+    return <Alert tone="error">{error || 'Listing not found'}</Alert>;
   }
 
   const images = listing.images?.length ? listing.images : ['/placeholder-listing.svg'];
@@ -112,12 +122,14 @@ function ListingDetail() {
   const fromInbox = Boolean(searchParams.get('with'));
   const peerId = searchParams.get('with') || listing.seller_id;
   const showChat = Boolean(user && (listing.status === 'active' || fromInbox));
+  const noteIsSuccess =
+    note.includes('sent') || note.includes('Thanks') || note.includes('submitted');
 
   return (
     <div className="space-y-8">
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-3">
-          <div className="relative aspect-square overflow-hidden rounded-xl bg-stone-100">
+          <div className="relative aspect-square overflow-hidden rounded-xl border border-border bg-slate-100">
             <Image
               src={images[activeImg]}
               alt={listing.title}
@@ -128,13 +140,17 @@ function ListingDetail() {
             />
           </div>
           {images.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto">
+            <div className="flex gap-2 overflow-x-auto pb-1" role="list" aria-label="Listing photos">
               {images.map((src, i) => (
                 <button
                   key={src + i}
                   type="button"
                   onClick={() => setActiveImg(i)}
-                  className={`relative h-16 w-16 shrink-0 overflow-hidden rounded border ${i === activeImg ? 'border-brand-600' : 'border-black/10'}`}
+                  aria-label={`Show photo ${i + 1}`}
+                  aria-current={i === activeImg ? 'true' : undefined}
+                  className={`relative h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded-lg border transition duration-180 ${
+                    i === activeImg ? 'border-brand-600' : 'border-border hover:border-brand-300'
+                  }`}
                 >
                   <Image src={src} alt="" fill className="object-cover" sizes="64px" />
                 </button>
@@ -143,56 +159,74 @@ function ListingDetail() {
           )}
         </div>
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Badge tone="amber">{listing.condition.replace('_', ' ')}</Badge>
-            {listing.status !== 'active' && (
-              <Badge tone="gray">{listing.status}</Badge>
-            )}
-            <h1 className="font-display text-3xl font-semibold">{listing.title}</h1>
-            <p className="text-2xl font-bold text-brand-700">
-              {listing.price.toLocaleString()} ETB
+        <div className="space-y-5">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tone={conditionTone[listing.condition] || 'gray'}>
+                {listing.condition.replace('_', ' ')}
+              </Badge>
+              {listing.status !== 'active' && <Badge tone="gray">{listing.status}</Badge>}
+            </div>
+            <h1 className="page-title">{listing.title}</h1>
+            <p className="text-2xl font-bold tracking-tight text-accent-600">
+              {listing.price.toLocaleString()}{' '}
+              <span className="text-base font-semibold text-muted">ETB</span>
             </p>
-            <p className="text-sm text-ink/70">
-              {listing.location}
-              {listing.seller ? ` · Seller: ${listing.seller.name}` : ''}
-              {listing.seller?.is_verified ? ' Verified' : ''}
-            </p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
+              <span className="inline-flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden strokeWidth={2} />
+                {listing.location}
+              </span>
+              {listing.seller && (
+                <span className="inline-flex items-center gap-1.5">
+                  {listing.seller.is_verified ? (
+                    <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-accent-600" aria-hidden strokeWidth={2} />
+                  ) : null}
+                  Seller: {listing.seller.name}
+                  {listing.seller.is_verified ? ' · Verified' : ''}
+                </span>
+              )}
+            </div>
           </div>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink/85">
-            {listing.description}
-          </p>
+
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">{listing.description}</p>
 
           {canBuy && (
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              <Button onClick={buyNow} loading={busy}>
+              <Button variant="secondary" onClick={buyNow} loading={busy}>
+                <ShoppingBag className="h-4 w-4" aria-hidden strokeWidth={2} />
                 Buy Now
               </Button>
-              <Button variant="secondary" onClick={() => setOfferOpen(true)}>
+              <Button variant="outline" onClick={() => setOfferOpen(true)}>
+                <Tag className="h-4 w-4" aria-hidden strokeWidth={2} />
                 Make Offer
               </Button>
             </div>
           )}
+
           {isOwn && (
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <p className="text-sm text-ink/60">This is your listing.</p>
-              <Link
-                href={`/listings/${listing.id}/edit`}
-                className="text-sm font-medium text-brand-700 underline"
-              >
-                Edit listing
+            <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted">This is your listing.</p>
+              <Link href={`/listings/${listing.id}/edit`}>
+                <Button variant="outline" type="button">
+                  <Pencil className="h-4 w-4" aria-hidden strokeWidth={2} />
+                  Edit listing
+                </Button>
               </Link>
             </div>
           )}
 
-          {note && <p className="text-sm text-brand-700">{note}</p>}
+          {note && (
+            <Alert tone={noteIsSuccess ? 'success' : 'error'}>{note}</Alert>
+          )}
 
           {!isOwn && (
             <button
               type="button"
               onClick={reportListing}
-              className="text-xs text-ink/50 underline hover:text-ink"
+              className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-muted hover:text-ink"
             >
+              <Flag className="h-3.5 w-3.5" aria-hidden strokeWidth={2} />
               Report listing
             </button>
           )}
@@ -202,39 +236,48 @@ function ListingDetail() {
       {showChat ? (
         <ListingChat listingId={listing.id} sellerId={listing.seller_id} peerId={peerId} />
       ) : listing.status !== 'active' && !isOwn ? (
-        <p className="text-sm text-ink/60">
+        <Alert tone="info">
           This listing is no longer available.{' '}
           {user ? (
-            <Link href="/inbox" className="underline">
+            <Link href="/inbox" className="font-semibold underline">
               Open inbox
             </Link>
           ) : (
             'Sign in to see past conversations in Inbox.'
           )}
-        </p>
+        </Alert>
       ) : (
         !isOwn && (
-          <p className="text-sm text-ink/60">
+          <Alert tone="info">
             <button
               type="button"
-              className="underline"
+              className="inline-flex cursor-pointer items-center gap-1.5 font-semibold underline"
               onClick={() => router.push(`/auth/login?next=/listings/${id}`)}
             >
+              <MessageCircle className="h-4 w-4" aria-hidden strokeWidth={2} />
               Sign in
             </button>{' '}
             to message the seller.
-          </p>
+          </Alert>
         )
       )}
 
       {offerOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="offer-dialog-title"
+        >
           <form
             onSubmit={sendOffer}
-            className="w-full max-w-md space-y-4 rounded-xl bg-white p-5"
+            className="w-full max-w-md space-y-4 rounded-xl border border-border bg-surface p-5"
           >
-            <h2 className="font-display text-xl font-semibold">Make an offer</h2>
+            <h2 id="offer-dialog-title" className="section-title">
+              Make an offer
+            </h2>
             <Input
+              id="offer-amount"
               label="Amount (ETB)"
               type="number"
               required
@@ -242,8 +285,8 @@ function ListingDetail() {
               value={offerAmount}
               onChange={(e) => setOfferAmount(e.target.value)}
             />
-            <div className="flex gap-2">
-              <Button type="submit" loading={busy}>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button type="submit" variant="secondary" loading={busy}>
                 Send offer
               </Button>
               <Button type="button" variant="ghost" onClick={() => setOfferOpen(false)}>

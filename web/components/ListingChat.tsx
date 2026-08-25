@@ -6,6 +6,7 @@ import { connectSocket } from '@/lib/socket';
 import { useAuth } from '@/lib/auth';
 import type { Message } from '@/types';
 import { Button } from './ui/Button';
+import { Alert } from './ui/Alert';
 
 export function ListingChat({
   listingId,
@@ -79,38 +80,42 @@ export function ListingChat({
   if (!user) return null;
   if (user.id === sellerId && peerId === sellerId) {
     return (
-      <p className="text-sm text-ink/60">
+      <p className="text-sm text-muted">
         Buyers message you from this listing. Open Inbox to reply to a conversation.
       </p>
     );
   }
 
   return (
-    <div className="space-y-3 rounded-xl border border-black/8 bg-white/90 p-4">
-      <h2 className="font-display text-lg font-semibold">
+    <div className="space-y-3 rounded-xl border border-border bg-surface p-4">
+      <h2 className="font-display text-lg font-semibold text-ink">
         {user.id === sellerId ? 'Chat with buyer' : 'Message seller'}
       </h2>
-      <div className="max-h-[min(60vh,28rem)] space-y-2 overflow-y-auto rounded-md bg-stone-50 p-3 text-sm">
+      <div className="max-h-[min(60vh,28rem)] space-y-2 overflow-y-auto rounded-lg bg-paper p-3 text-sm">
         {thread.map((m) => (
           <p
             key={m.id}
-            className={`max-w-[90%] rounded-md px-3 py-2 ${
-              m.sender_id === user.id ? 'ml-auto bg-brand-600 text-white' : 'bg-white'
+            className={`max-w-[90%] rounded-lg px-3 py-2 ${
+              m.sender_id === user.id ? 'ml-auto bg-brand-600 text-white' : 'border border-border bg-surface text-ink'
             }`}
           >
             {m.content}
           </p>
         ))}
-        {thread.length === 0 && <p className="text-ink/50">No messages yet.</p>}
+        {thread.length === 0 && <p className="text-muted">No messages yet.</p>}
         <div ref={bottom} />
       </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <Alert tone="error">{error}</Alert>}
       <form onSubmit={send} className="flex flex-col gap-2 sm:flex-row">
+        <label htmlFor={`chat-draft-${listingId}`} className="sr-only">
+          Message
+        </label>
         <textarea
+          id={`chat-draft-${listingId}`}
           required
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          className="min-h-[72px] w-full rounded-md border border-black/10 p-3 text-sm outline-none ring-brand-500 focus:ring-2"
+          className="field min-h-[72px] resize-y"
           placeholder="Ask about condition, meetup, etc."
           maxLength={2000}
         />

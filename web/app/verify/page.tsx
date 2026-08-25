@@ -2,10 +2,56 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { IdCard, ShieldCheck, UserRound } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { Alert } from '@/components/ui/Alert';
+
+function FileField({
+  id,
+  label,
+  hint,
+  icon: Icon,
+  file,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  hint: string;
+  icon: typeof IdCard;
+  file: File | null;
+  onChange: (file: File | null) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="block text-sm font-medium text-ink">
+        {label}
+      </label>
+      <label
+        htmlFor={id}
+        className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-paper px-4 py-8 text-center transition duration-180 hover:border-brand-300 hover:bg-brand-50/40"
+      >
+        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface text-brand-600">
+          <Icon className="h-5 w-5" aria-hidden strokeWidth={1.75} />
+        </span>
+        <span className="text-sm font-medium text-ink">
+          {file ? file.name : 'Click to choose a photo'}
+        </span>
+        <span className="text-xs text-muted">{hint}</span>
+        <input
+          id={id}
+          type="file"
+          accept="image/*"
+          required
+          className="sr-only"
+          onChange={(e) => onChange(e.target.files?.[0] || null)}
+        />
+      </label>
+    </div>
+  );
+}
 
 export default function VerifyPage() {
   const { user, token, isLoading } = useAuth();
@@ -47,7 +93,7 @@ export default function VerifyPage() {
 
   if (isLoading || !canSubmit) {
     return (
-      <div className="flex justify-center py-16">
+      <div className="flex justify-center py-16" aria-busy="true" aria-label="Loading">
         <Spinner />
       </div>
     );
@@ -55,22 +101,44 @@ export default function VerifyPage() {
 
   return (
     <div className="mx-auto max-w-md space-y-6">
-      <div>
-        <h1 className="font-display text-3xl font-semibold">Get verified</h1>
-        <p className="mt-1 text-sm text-ink/70">Upload a clear ID photo and a selfie.</p>
+      <div className="space-y-3 text-center sm:text-left">
+        <div
+          className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 sm:mx-0"
+          aria-hidden
+        >
+          <ShieldCheck className="h-6 w-6" strokeWidth={1.75} />
+        </div>
+        <div>
+          <h1 className="page-title">Get verified</h1>
+          <p className="muted mt-1">Upload a clear ID photo and a selfie.</p>
+        </div>
       </div>
-      <form onSubmit={onSubmit} className="space-y-4 rounded-xl border border-black/8 bg-white/90 p-5">
-        <label className="block space-y-1 text-sm">
-          <span className="font-medium">ID image</span>
-          <input type="file" accept="image/*" required onChange={(e) => setIdImage(e.target.files?.[0] || null)} />
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span className="font-medium">Face image</span>
-          <input type="file" accept="image/*" required onChange={(e) => setFaceImage(e.target.files?.[0] || null)} />
-        </label>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {success && <p className="text-sm text-brand-700">{success}</p>}
-        <Button type="submit" loading={busy} className="w-full">
+
+      <form
+        onSubmit={onSubmit}
+        className="space-y-4 rounded-xl border border-border bg-surface p-4 sm:p-5"
+      >
+        <FileField
+          id="verify-id-image"
+          label="ID image"
+          hint="Government ID or passport, well lit"
+          icon={IdCard}
+          file={idImage}
+          onChange={setIdImage}
+        />
+        <FileField
+          id="verify-face-image"
+          label="Face image"
+          hint="Clear selfie matching your ID"
+          icon={UserRound}
+          file={faceImage}
+          onChange={setFaceImage}
+        />
+
+        {error && <Alert tone="error">{error}</Alert>}
+        {success && <Alert tone="success">{success}</Alert>}
+
+        <Button type="submit" variant="secondary" loading={busy} className="w-full">
           Submit for review
         </Button>
       </form>

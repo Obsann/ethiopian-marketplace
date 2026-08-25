@@ -2,12 +2,15 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Category, Listing } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
 import { Spinner } from '@/components/ui/Spinner';
+import { Alert } from '@/components/ui/Alert';
 
 export default function EditListingPage() {
   const { id } = useParams<{ id: string }>();
@@ -95,7 +98,7 @@ export default function EditListingPage() {
 
   if (isLoading || !user || loading) {
     return (
-      <div className="flex justify-center py-16">
+      <div className="flex justify-center py-16" aria-busy="true" aria-label="Loading editor">
         <Spinner />
       </div>
     );
@@ -104,25 +107,37 @@ export default function EditListingPage() {
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-semibold">Edit listing</h1>
-        <p className="mt-1 text-sm text-ink/70">Changes are saved to the live database.</p>
+        <h1 className="page-title">Edit listing</h1>
+        <p className="muted mt-1">Changes are saved to the live database.</p>
       </div>
-      <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-black/8 bg-white p-5 shadow-card">
-        <Input label="Title" value={form.title} onChange={(e) => update('title', e.target.value)} required />
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium">Description</span>
-          <textarea
-            className="field min-h-[100px]"
-            value={form.description}
-            onChange={(e) => update('description', e.target.value)}
-            required
-            minLength={10}
-          />
-        </label>
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium">Category</span>
+
+      <form
+        onSubmit={onSubmit}
+        className="space-y-4 rounded-xl border border-border bg-surface p-4 sm:p-5"
+      >
+        <Input
+          id="edit-title"
+          label="Title"
+          value={form.title}
+          onChange={(e) => update('title', e.target.value)}
+          required
+        />
+        <Textarea
+          id="edit-description"
+          label="Description"
+          value={form.description}
+          onChange={(e) => update('description', e.target.value)}
+          required
+          minLength={10}
+          className="min-h-[100px]"
+        />
+        <div className="space-y-1.5">
+          <label htmlFor="edit-category" className="block text-sm font-medium text-ink">
+            Category
+          </label>
           <select
-            className="field"
+            id="edit-category"
+            className="field cursor-pointer"
             value={form.category_id}
             onChange={(e) => update('category_id', e.target.value)}
             required
@@ -134,17 +149,25 @@ export default function EditListingPage() {
               </option>
             ))}
           </select>
-        </label>
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium">Condition</span>
-          <select className="field" value={form.condition} onChange={(e) => update('condition', e.target.value)}>
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="edit-condition" className="block text-sm font-medium text-ink">
+            Condition
+          </label>
+          <select
+            id="edit-condition"
+            className="field cursor-pointer"
+            value={form.condition}
+            onChange={(e) => update('condition', e.target.value)}
+          >
             <option value="new">New</option>
             <option value="like_new">Like new</option>
             <option value="good">Good</option>
             <option value="fair">Fair</option>
           </select>
-        </label>
+        </div>
         <Input
+          id="edit-price"
           label="Price (ETB)"
           type="number"
           value={form.price}
@@ -152,22 +175,33 @@ export default function EditListingPage() {
           required
         />
         <Input
+          id="edit-location"
           label="Location"
           value={form.location}
           onChange={(e) => update('location', e.target.value)}
           required
         />
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium">Status</span>
-          <select className="field" value={form.status} onChange={(e) => update('status', e.target.value)}>
+        <div className="space-y-1.5">
+          <label htmlFor="edit-status" className="block text-sm font-medium text-ink">
+            Status
+          </label>
+          <select
+            id="edit-status"
+            className="field cursor-pointer"
+            value={form.status}
+            onChange={(e) => update('status', e.target.value)}
+          >
             <option value="active">Active</option>
             <option value="sold">Sold</option>
             <option value="removed">Removed</option>
           </select>
-        </label>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <div className="flex gap-2">
+        </div>
+
+        {error && <Alert tone="error">{error}</Alert>}
+
+        <div className="flex flex-col gap-2 pt-1 sm:flex-row">
           <Button type="button" variant="ghost" onClick={() => router.push(`/listings/${id}`)}>
+            <ArrowLeft className="h-4 w-4" aria-hidden strokeWidth={2} />
             Cancel
           </Button>
           <Button type="submit" loading={busy}>

@@ -1,13 +1,10 @@
+import { LucideIcon, type LucideProps } from 'lucide-react';
+
+/** Prefer importing Lucide icons directly. Kept for any legacy Material Symbol name maps. */
 export function Icon({
-  name,
+  icon: Lucide,
   className = '',
-}: {
-  name: string;
-  className?: string;
-}) {
-  return (
-    <span className={`material-symbols-outlined ${className}`.trim()} aria-hidden>
-      {name}
-    </span>
-  );
+  ...props
+}: { icon: LucideIcon; className?: string } & LucideProps) {
+  return <Lucide className={className} aria-hidden strokeWidth={1.75} {...props} />;
 }

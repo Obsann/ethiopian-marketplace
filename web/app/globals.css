@@ -3,11 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --bg:    #faf7f2;
-  --ink:   #1c1917;
-  --muted: #78716c;
-  --brand: #1a7a4c;
-  --accent: #e8a317;
+  --bg: #f8fafc;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --brand: #2563eb;
+  --accent: #16a34a;
+  --border: #e2e8f0;
+  --surface: #ffffff;
+  --ring: #2563eb;
 }
 
 html {
@@ -23,47 +26,50 @@ body {
 body {
   color: var(--ink);
   background: var(--bg);
-  background-image:
-    radial-gradient(ellipse 70% 45% at 8% -5%, rgba(26,122,76,0.10), transparent),
-    radial-gradient(ellipse 55% 35% at 98% 2%, rgba(232,163,23,0.09), transparent);
   min-height: 100vh;
 }
 
 ::selection {
-  background: rgba(26, 122, 76, 0.18);
+  background: rgba(37, 99, 235, 0.18);
+}
+
+@layer base {
+  *:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  a,
+  button,
+  [role='button'],
+  summary {
+    cursor: pointer;
+  }
 }
 
 @layer components {
   .field {
-    @apply w-full rounded-xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none transition
-      focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20;
+    @apply w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-ink outline-none transition duration-180
+      placeholder:text-muted/80
+      focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20;
   }
-}
 
-.material-symbols-outlined {
-  font-family: 'Material Symbols Outlined';
-  font-weight: 400;
-  font-style: normal;
-  font-size: 1.5rem;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
-  display: inline-block;
-  white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-  -webkit-font-smoothing: antialiased;
-  user-select: none;
+  .page-title {
+    @apply font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl;
+  }
+
+  .section-title {
+    @apply font-display text-xl font-semibold tracking-tight text-ink sm:text-2xl;
+  }
+
+  .muted {
+    @apply text-sm text-muted;
+  }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
-  }
-
-  .pattern-mesh {
-    background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%231a7a4c' fill-opacity='0.04'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
   }
 }
 
@@ -71,13 +77,16 @@ body {
   html {
     scroll-behavior: auto;
   }
-  * {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
 
-/* Google Translate Element — MedSchedule-style widget */
+/* Google Translate Element */
 .goog-te-banner-frame,
 .skiptranslate iframe {
   display: none !important;
@@ -87,7 +96,6 @@ body {
   top: 0 !important;
 }
 
-/* Kill gadget chrome / "Powered by" leftover text nodes */
 .goog-te-gadget {
   display: flex !important;
   align-items: center !important;
@@ -104,21 +112,21 @@ body {
   font-size: 13px !important;
   line-height: 1.25 !important;
   padding: 6px 10px !important;
-  border: 1px solid #e5e7eb !important;
-  border-radius: 10px !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
   background: #fff !important;
   color: var(--ink) !important;
   cursor: pointer;
 }
 
 .goog-te-gadget .goog-te-combo:hover {
-  border-color: #d1d5db !important;
+  border-color: #cbd5e1 !important;
 }
 
 .goog-te-gadget .goog-te-combo:focus {
   outline: none !important;
-  border-color: #1a7a4c !important;
-  box-shadow: 0 0 0 3px rgba(26, 122, 76, 0.2) !important;
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
 }
 
 .goog-te-gadget > span,
@@ -128,7 +136,6 @@ body {
   display: none !important;
 }
 
-/* Header mount: single-line, no extra height from branding */
 #google_translate_header_target {
   display: flex;
   align-items: center;

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
 
 function ResetForm() {
@@ -49,31 +50,49 @@ function ResetForm() {
   return (
     <div className="mx-auto max-w-md space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-semibold">Set a new password</h1>
-        <p className="mt-1 text-sm text-ink/70">Choose a password for your SuqET account.</p>
+        <h1 className="page-title">Set a new password</h1>
+        <p className="mt-1 text-sm text-muted">Choose a password for your SuqET account.</p>
       </div>
-      <form onSubmit={onSubmit} className="space-y-4 rounded-xl border border-black/8 bg-white/90 p-5">
+      <form
+        onSubmit={onSubmit}
+        className="space-y-4 rounded-xl border border-border bg-surface p-5"
+      >
         <Input
+          id="reset-password"
           label="New password"
           type="password"
+          name="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          autoComplete="new-password"
         />
         <Input
+          id="reset-confirm"
           label="Confirm password"
           type="password"
+          name="confirm"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           required
+          autoComplete="new-password"
         />
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <Button type="submit" className="w-full" loading={loading} disabled={!token}>
+        {error && <Alert tone="error">{error}</Alert>}
+        <Button
+          type="submit"
+          variant="primary"
+          className="w-full"
+          loading={loading}
+          disabled={!token}
+        >
           Update password
         </Button>
       </form>
-      <p className="text-center text-sm">
-        <Link href="/auth/forgot-password" className="font-medium text-brand-600 hover:underline">
+      <p className="text-center text-sm text-muted">
+        <Link
+          href="/auth/forgot-password"
+          className="cursor-pointer text-brand-600 hover:underline"
+        >
           Request a new link
         </Link>
       </p>

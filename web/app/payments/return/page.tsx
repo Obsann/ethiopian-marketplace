@@ -2,10 +2,11 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
-import Link from 'next/link';
 
 function PaymentReturn() {
   const params = useSearchParams();
@@ -53,10 +54,13 @@ function PaymentReturn() {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-md space-y-3 rounded-xl border border-black/8 bg-white p-6 text-center">
-        <h1 className="font-display text-2xl font-semibold">Payment status</h1>
-        <p className="text-sm text-red-600">{error}</p>
-        <Link href="/orders" className="text-sm underline">
+      <div className="mx-auto max-w-md space-y-4 rounded-xl border border-border bg-surface p-6 text-center">
+        <h1 className="font-display text-2xl font-semibold text-ink">Payment status</h1>
+        <Alert tone="error">{error}</Alert>
+        <Link
+          href="/orders"
+          className="inline-block cursor-pointer text-sm font-medium text-brand-600 transition duration-180 hover:text-brand-700"
+        >
           Back to orders
         </Link>
       </div>
@@ -66,7 +70,7 @@ function PaymentReturn() {
   return (
     <div className="flex flex-col items-center gap-3 py-16">
       <Spinner />
-      <p className="text-sm text-ink/70">Confirming your Chapa payment…</p>
+      <p className="text-sm text-muted">Confirming your Chapa payment…</p>
     </div>
   );
 }

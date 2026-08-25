@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
-import { DM_Sans, Fraunces } from 'next/font/google';
+import { Outfit, Work_Sans } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -8,14 +8,16 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { GoogleTranslate } from '@/components/GoogleTranslate';
 
-const sans = DM_Sans({
+const sans = Work_Sans({
   subsets: ['latin'],
   variable: '--font-sans',
+  weight: ['400', '500', '600', '700'],
 });
 
-const display = Fraunces({
+const display = Outfit({
   subsets: ['latin'],
   variable: '--font-display',
+  weight: ['500', '600', '700'],
 });
 
 export const metadata: Metadata = {
@@ -29,16 +31,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
-        />
-      </head>
       <body className={`${sans.variable} ${display.variable} font-sans antialiased`}>
-        {/* Google Translate: React DOM patch + init callback before element.js loads. */}
         <Script id="google-translate-bootstrap" strategy="beforeInteractive">{`
           (function () {
             if (typeof Node === 'function' && Node.prototype && !window.__gtDomPatched) {

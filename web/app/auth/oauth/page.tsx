@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
 import type { User } from '@/types';
 
@@ -48,20 +49,30 @@ function OAuthCallback() {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-md space-y-4 text-center">
-        <h1 className="font-display text-2xl font-semibold">Google sign-in</h1>
-        <p className="text-sm text-red-600">{error}</p>
-        <Link href="/auth/login" className="font-medium text-brand-600 hover:underline">
-          Back to log in
-        </Link>
+      <div className="mx-auto max-w-md space-y-6">
+        <div>
+          <h1 className="page-title">Google sign-in</h1>
+          <p className="mt-1 text-sm text-muted">Something went wrong finishing sign-in.</p>
+        </div>
+        <div className="space-y-4 rounded-xl border border-border bg-surface p-5">
+          <Alert tone="error">{error}</Alert>
+          <Link
+            href="/auth/login"
+            className="inline-block cursor-pointer text-sm text-brand-600 hover:underline"
+          >
+            Back to log in
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center gap-3 py-16">
-      <Spinner />
-      <p className="text-sm text-ink/70">Finishing Google sign-in…</p>
+    <div className="mx-auto max-w-md">
+      <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-surface p-5 py-12">
+        <Spinner />
+        <p className="text-sm text-muted">Finishing Google sign-in…</p>
+      </div>
     </div>
   );
 }

@@ -4,10 +4,13 @@ import { FormEvent, Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
+import { MessageSquare } from 'lucide-react';
 import { api, getApiUrl } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Listing, Message } from '@/types';
+import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
 
 function ChatView() {
@@ -138,50 +141,62 @@ function ChatView() {
   }
 
   if (error) {
-    return <p className="text-sm text-red-600">{error}</p>;
+    return <Alert tone="error">{error}</Alert>;
   }
 
   if (user && withUserId === user.id) {
     return (
-      <p className="text-sm text-ink/70">
+      <Alert tone="info">
         You cannot chat with yourself.{' '}
-        <Link href="/chat" className="font-medium text-brand-600 hover:underline">
+        <Link href="/chat" className="font-semibold underline underline-offset-2">
           Open your inbox
         </Link>{' '}
         to reply to buyers.
-      </p>
+      </Alert>
     );
   }
 
   return (
-    <div className="flex h-[calc(100vh-9rem)] flex-col overflow-hidden rounded-2xl border border-black/8 bg-white shadow-card">
-      <div className="border-b border-black/8 px-4 py-3">
-        <h1 className="font-display text-lg font-semibold">
+    <div className="flex h-[calc(100vh-9rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface">
+      <div className="border-b border-border px-4 py-3">
+        <h1 className="font-display text-lg font-semibold text-ink">
           {listing ? listing.title : 'Chat'}
         </h1>
-        {listing && (
-          <Link href={`/listings/${listing.id}`} className="text-xs text-brand-600 hover:underline">
-            View listing
+        <div className="mt-0.5 flex flex-wrap gap-3 text-xs">
+          {listing && (
+            <Link
+              href={`/listings/${listing.id}`}
+              className="cursor-pointer font-medium text-brand-600 transition duration-180 hover:text-brand-700"
+            >
+              View listing
+            </Link>
+          )}
+          <Link
+            href="/chat"
+            className="cursor-pointer text-muted transition duration-180 hover:text-ink"
+          >
+            All messages
           </Link>
-        )}
-        <Link href="/chat" className="ml-3 text-xs text-ink/50 hover:underline">
-          All messages
-        </Link>
+        </div>
       </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto px-3 py-4 sm:px-4">
+      <div className="flex-1 space-y-3 overflow-y-auto bg-paper px-3 py-4 sm:px-4">
         {messages.length === 0 && (
-          <p className="py-8 text-center text-sm text-ink/50">
-            No messages yet. Say hello to start the conversation.
-          </p>
+          <EmptyState
+            icon={MessageSquare}
+            title="No messages yet"
+            description="Say hello to start the conversation."
+          />
         )}
         {messages.map((m) => {
           const mine = m.sender_id === user?.id;
           return (
             <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
               <div
-                className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
-                  mine ? 'bg-brand-600 text-white' : 'bg-stone-100 text-ink'
+                className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                  mine
+                    ? 'bg-brand-600 text-white'
+                    : 'border border-border bg-surface text-ink'
                 }`}
               >
                 <p className="whitespace-pre-wrap break-words">{m.content}</p>
@@ -192,7 +207,7 @@ function ChatView() {
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={send} className="flex gap-2 border-t border-black/8 p-3">
+      <form onSubmit={send} className="flex gap-2 border-t border-border bg-surface p-3">
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -204,7 +219,11 @@ function ChatView() {
           Send
         </Button>
       </form>
-      {sendError && <p className="px-3 pb-3 text-sm text-red-600">{sendError}</p>}
+      {sendError && (
+        <div className="px-3 pb-3">
+          <Alert tone="error">{sendError}</Alert>
+        </div>
+      )}
     </div>
   );
 }

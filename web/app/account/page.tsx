@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
 import type { User } from '@/types';
 
@@ -59,21 +60,37 @@ export default function AccountPage() {
   return (
     <div className="mx-auto max-w-md space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-semibold">Account</h1>
-        <p className="mt-1 text-sm text-ink/70">Update your name and phone. Google accounts can add a phone here.</p>
+        <h1 className="page-title">Account</h1>
+        <p className="mt-1 text-sm text-muted">
+          Update your name and phone. Google accounts can add a phone here.
+        </p>
       </div>
-      <form onSubmit={onSubmit} className="space-y-4 rounded-xl border border-black/8 bg-white/90 p-5">
-        <Input label="Email" value={user.email} disabled />
-        <Input label="Full name" value={name} onChange={(e) => setName(e.target.value)} required />
+      <form
+        onSubmit={onSubmit}
+        className="space-y-4 rounded-xl border border-border bg-surface p-5"
+      >
+        <Input id="account-email" label="Email" name="email" value={user.email} disabled />
         <Input
+          id="account-name"
+          label="Full name"
+          name="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          autoComplete="name"
+        />
+        <Input
+          id="account-phone"
           label="Phone"
+          name="phone"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="+2519…"
+          autoComplete="tel"
         />
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {ok && <p className="text-sm text-brand-700">{ok}</p>}
-        <Button type="submit" className="w-full" loading={busy}>
+        {error && <Alert tone="error">{error}</Alert>}
+        {ok && <Alert tone="success">{ok}</Alert>}
+        <Button type="submit" variant="primary" className="w-full" loading={busy}>
           Save
         </Button>
       </form>

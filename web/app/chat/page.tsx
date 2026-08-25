@@ -3,8 +3,11 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { MessageSquare } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { Alert } from '@/components/ui/Alert';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
 
 interface Conversation {
@@ -44,41 +47,49 @@ export default function InboxPage() {
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-4">
+    <div className="mx-auto max-w-xl space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-semibold">Messages</h1>
-        <p className="mt-1 text-sm text-ink/70">Reply to buyers and sellers in one place.</p>
+        <h1 className="font-display text-3xl font-semibold text-ink">Messages</h1>
+        <p className="mt-1 text-sm text-muted">Reply to buyers and sellers in one place.</p>
       </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {items.length === 0 && !error && (
-        <p className="rounded-2xl border border-dashed border-black/10 bg-white px-4 py-10 text-center text-sm text-ink/60">
-          No conversations yet. Open a listing and tap Message Seller to start one.
-        </p>
+      {error && <Alert tone="error">{error}</Alert>}
+      {items.length === 0 && !error ? (
+        <EmptyState
+          icon={MessageSquare}
+          title="No conversations yet"
+          description="Open a listing and tap Message Seller to start one."
+          actionHref="/listings"
+          actionLabel="Browse listings"
+        />
+      ) : (
+        <ul className="space-y-2">
+          {items.map((c) => (
+            <li key={`${c.listing_id}:${c.other_user.id}`}>
+              <Link
+                href={`/chat/${c.listing_id}?with=${c.other_user.id}`}
+                className="block cursor-pointer rounded-xl border border-border bg-surface px-4 py-3 transition duration-180 hover:border-brand-300"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-semibold text-ink">
+                    {c.other_user.name}
+                    {c.unread && (
+                      <span
+                        className="ml-2 inline-block h-2 w-2 rounded-full bg-danger-600 align-middle"
+                        aria-label="Unread"
+                      />
+                    )}
+                  </p>
+                  <span className="shrink-0 text-xs text-muted">
+                    {new Date(c.last_at).toLocaleString()}
+                  </span>
+                </div>
+                <p className="mt-0.5 truncate text-sm text-muted">{c.listing_title}</p>
+                <p className="mt-1 truncate text-sm text-muted">{c.last_message}</p>
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
-      <ul className="space-y-2">
-        {items.map((c) => (
-          <li key={`${c.listing_id}:${c.other_user.id}`}>
-            <Link
-              href={`/chat/${c.listing_id}?with=${c.other_user.id}`}
-              className="block rounded-2xl border border-black/8 bg-white px-4 py-3 shadow-card transition hover:-translate-y-0.5 hover:border-brand-500/30"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <p className="font-semibold">
-                  {c.other_user.name}
-                  {c.unread && (
-                    <span className="ml-2 inline-block h-2 w-2 rounded-full bg-red-600 align-middle" />
-                  )}
-                </p>
-                <span className="shrink-0 text-xs text-ink/45">
-                  {new Date(c.last_at).toLocaleString()}
-                </span>
-              </div>
-              <p className="mt-0.5 truncate text-sm text-ink/70">{c.listing_title}</p>
-              <p className="mt-1 truncate text-sm text-ink/55">{c.last_message}</p>
-            </Link>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

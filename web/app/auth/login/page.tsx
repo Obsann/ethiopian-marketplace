@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
 import { GoogleSignInButton } from '@/components/GoogleSignInButton';
 
@@ -44,40 +45,49 @@ function LoginForm() {
   return (
     <div className="mx-auto max-w-md space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-semibold">Log in</h1>
-        <p className="mt-1 text-sm text-ink/70">Welcome back to SuqET.</p>
+        <h1 className="page-title">Log in</h1>
+        <p className="mt-1 text-sm text-muted">Welcome back to SuqET.</p>
       </div>
-      <div className="space-y-4 rounded-xl border border-black/8 bg-white/90 p-5">
+      <div className="space-y-4 rounded-xl border border-border bg-surface p-5">
         <GoogleSignInButton next={params.get('next') || undefined} />
         <form onSubmit={onSubmit} className="space-y-4">
           <Input
+            id="login-email"
             label="Email"
             type="email"
+            name="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             error={errors.email}
             required
+            autoComplete="email"
           />
           <div>
             <Input
+              id="login-password"
               label="Password"
               type="password"
+              name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               error={errors.password}
               required
+              autoComplete="current-password"
             />
             <p className="mt-1.5 text-right text-sm">
-              <Link href="/auth/forgot-password" className="font-medium text-brand-600 hover:underline">
+              <Link
+                href="/auth/forgot-password"
+                className="cursor-pointer text-brand-600 hover:underline"
+              >
                 Forgot password?
               </Link>
             </p>
           </div>
-          {formError && <p className="text-sm text-red-600">{formError}</p>}
+          {formError && <Alert tone="error">{formError}</Alert>}
           {formError.includes('Confirm your email') && (
             <button
               type="button"
-              className="text-sm font-medium text-brand-600 hover:underline"
+              className="cursor-pointer text-sm font-medium text-brand-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2"
               onClick={async () => {
                 try {
                   await api('/api/auth/resend-verification', {
@@ -93,14 +103,14 @@ function LoginForm() {
               Resend confirmation email
             </button>
           )}
-          <Button type="submit" className="w-full" loading={loading}>
+          <Button type="submit" variant="primary" className="w-full" loading={loading}>
             Log in
           </Button>
         </form>
       </div>
-      <p className="text-center text-sm">
+      <p className="text-center text-sm text-muted">
         New here?{' '}
-        <Link href="/auth/register" className="font-medium text-brand-600 hover:underline">
+        <Link href="/auth/register" className="cursor-pointer text-brand-600 hover:underline">
           Create an account
         </Link>
       </p>

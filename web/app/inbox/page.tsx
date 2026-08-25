@@ -3,9 +3,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Inbox } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { ConversationPreview } from '@/types';
+import { Alert } from '@/components/ui/Alert';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
 
 export default function InboxPage() {
@@ -36,26 +39,35 @@ export default function InboxPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-semibold">Inbox</h1>
-        <p className="mt-1 text-sm text-ink/70">Conversations about listings.</p>
+        <h1 className="font-display text-3xl font-semibold text-ink">Inbox</h1>
+        <p className="mt-1 text-sm text-muted">Conversations about listings.</p>
       </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <ul className="space-y-3">
-        {items.map((c) => (
-          <li key={`${c.listing_id}-${c.other_user.id}`}>
-            <Link
-              href={`/inbox/${c.listing_id}/${c.other_user.id}`}
-              className="block rounded-lg border border-black/8 bg-white/90 p-4 hover:border-brand-500/40"
-            >
-              <p className="font-medium">
-                {c.other_user.name} · {c.listing_title}
-              </p>
-              <p className="mt-1 line-clamp-2 text-sm text-ink/70">{c.last_message.content}</p>
-            </Link>
-          </li>
-        ))}
-        {items.length === 0 && <p className="text-sm text-ink/60">No conversations yet.</p>}
-      </ul>
+      {error && <Alert tone="error">{error}</Alert>}
+      {items.length === 0 ? (
+        <EmptyState
+          icon={Inbox}
+          title="No conversations yet"
+          description="Open a listing and message the seller to start a thread."
+          actionHref="/listings"
+          actionLabel="Browse listings"
+        />
+      ) : (
+        <ul className="space-y-2">
+          {items.map((c) => (
+            <li key={`${c.listing_id}-${c.other_user.id}`}>
+              <Link
+                href={`/inbox/${c.listing_id}/${c.other_user.id}`}
+                className="block cursor-pointer rounded-xl border border-border bg-surface p-4 transition duration-180 hover:border-brand-300"
+              >
+                <p className="font-medium text-ink">
+                  {c.other_user.name} · {c.listing_title}
+                </p>
+                <p className="mt-1 line-clamp-2 text-sm text-muted">{c.last_message.content}</p>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
