@@ -4,10 +4,7 @@ import { Listing } from '@/types';
 import { Badge } from './ui/Badge';
 
 const conditionTone: Record<string, 'green' | 'amber' | 'gray'> = {
-  new: 'green',
-  like_new: 'green',
-  good: 'amber',
-  fair: 'gray',
+  new: 'green', like_new: 'green', good: 'amber', fair: 'gray',
 };
 
 export function ListingCard({ listing }: { listing: Listing }) {
@@ -15,37 +12,37 @@ export function ListingCard({ listing }: { listing: Listing }) {
   return (
     <Link
       href={`/listings/${listing.id}`}
-      className="group block overflow-hidden rounded-2xl border border-black/8 bg-white shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-brand-500/30 hover:shadow-lift"
+      className="group block overflow-hidden rounded-2xl border border-black/8 bg-white shadow-card transition duration-200 hover:-translate-y-1 hover:border-brand-500/30 hover:shadow-lift"
     >
-      <div className="relative aspect-[4/3] bg-stone-100">
+      <div className="relative aspect-[4/3] bg-stone-100 overflow-hidden">
         <Image
           src={img}
           alt={listing.title}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          className="object-cover transition duration-300 group-hover:scale-[1.04]"
+          className="object-cover transition duration-500 group-hover:scale-[1.06]"
         />
         <div className="absolute left-2 top-2">
           <Badge tone={conditionTone[listing.condition] || 'gray'}>
             {listing.condition.replace('_', ' ')}
           </Badge>
         </div>
+        {listing.seller?.is_verified && (
+          <div className="absolute bottom-2 right-2">
+            <span className="rounded-full bg-brand-600/90 px-2.5 py-0.5 text-xs font-semibold text-white backdrop-blur-sm">
+              ✓ Verified
+            </span>
+          </div>
+        )}
       </div>
-      <div className="space-y-2 p-3.5">
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug group-hover:text-brand-700">
+      <div className="space-y-1.5 p-4">
+        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-ink group-hover:text-brand-700 transition-colors">
           {listing.title}
         </h3>
-        <p className="text-lg font-bold tracking-tight text-brand-700">
-          {listing.price.toLocaleString()} ETB
+        <p className="text-xl font-bold tracking-tight text-brand-700">
+          {listing.price.toLocaleString()} <span className="text-sm font-semibold text-muted">ETB</span>
         </p>
-        <div className="flex items-center justify-between gap-2 text-xs text-ink/60">
-          <span className="truncate">{listing.location}</span>
-          {listing.seller?.is_verified && (
-            <span className="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 font-medium text-brand-700">
-              Verified
-            </span>
-          )}
-        </div>
+        <p className="truncate text-xs text-muted">{listing.location}</p>
       </div>
     </Link>
   );
