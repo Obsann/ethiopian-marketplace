@@ -15,7 +15,7 @@ Branch for this work: `feat/hackathon-demo-ship` (PR https://github.com/kikemal/
 | 21 Aug 2026 | kikemal | `2b3752d` | First working SuqET monorepo: Express API + Next.js UI, Prisma, Docker Postgres, seed accounts, listings, basic auth, chat API, payments, KYC submit, admin screen. |
 | 21 Aug 2026 | kikemal | `e2b69fd` | Fix listings layout compile error (invalid `#` comment). This is **`main`** today. |
 | 25 Aug 2026 | Obsann | `7a7dfa3` | Demo-ready work on `feat/hackathon-demo-ship`: auth (Google, cookies, reset/verify), inbox UI, private KYC, Chapa TEST checkout + sync, orders, notifications, honest teammate README. |
-| 25 Aug 2026 | (this docs commit) | — | Judge-facing `README.md` and this file. |
+| 25 Aug 2026 | Obsann | `76d236d` | Judge-facing `README.md` (project, setup, features, usage only) and this separate `CONTRIBUTIONS.md` file. |
 
 Commands used to check this: `git log --reverse --format="%h %ad %an %s" --date=short` and `git log` with dates.
 
@@ -79,10 +79,10 @@ All of the following is in **one** git commit (`7a7dfa3`, 25 Aug 2026), grouped 
 - Extra Prisma migrations (payment locks, OAuth/reset tokens, notifications, email verified)
 - First teammate README (honest about TEST vs mock, escrow, SMTP)
 
-### These two docs
+### These docs (kept separate from the judge README)
 
-- `README.md` rewritten for **hackathon judges** (project, setup, features, usage)
-- This `CONTRIBUTIONS.md` file
+- `README.md` is **only** for hackathon judges: Project, Setup, Features, Usage. It does **not** contain this clone-to-now history.
+- This `CONTRIBUTIONS.md` file is the journey from the first clone onward.
 
 ---
 
