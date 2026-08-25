@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import * as verificationsController from '../controllers/verifications';
 import { authenticate, requireRoles } from '../middleware/auth';
+import { asyncHandler } from '../middleware/asyncHandler';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -17,19 +18,19 @@ router.post(
     { name: 'id_image', maxCount: 1 },
     { name: 'face_image', maxCount: 1 },
   ]),
-  verificationsController.submitVerification
+  asyncHandler(verificationsController.submitVerification)
 );
 router.get(
   '/pending',
   authenticate,
   requireRoles('admin'),
-  verificationsController.listPendingVerifications
+  asyncHandler(verificationsController.listPendingVerifications)
 );
 router.patch(
   '/:id/review',
   authenticate,
   requireRoles('admin'),
-  verificationsController.reviewVerification
+  asyncHandler(verificationsController.reviewVerification)
 );
 
 export default router;

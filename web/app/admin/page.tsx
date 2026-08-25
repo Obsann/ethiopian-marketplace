@@ -15,6 +15,7 @@ interface ReportRow {
   reason: string;
   status: string;
   reporter: { name: string };
+  target?: { id: string; title?: string; name?: string; email?: string } | null;
 }
 
 interface VerificationRow {
@@ -32,6 +33,7 @@ export default function AdminPage() {
   const [verifications, setVerifications] = useState<VerificationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== 'admin')) {
@@ -47,8 +49,8 @@ export default function AdminPage() {
         api<{ items: ReportRow[] }>('/api/reports', { token }),
         api<VerificationRow[]>('/api/verifications/pending', { token }),
       ]);
-      setReports(r.data.items);
-      setVerifications(v.data);
+      setReports((r.data.items ?? []).filter((row) => row.status === 'open'));
+      setVerifications(v.data ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
@@ -63,22 +65,32 @@ export default function AdminPage() {
 
   async function patchReport(id: string, status: 'resolved' | 'dismissed') {
     if (!token) return;
-    await api(`/api/reports/${id}`, {
-      method: 'PATCH',
-      token,
-      body: JSON.stringify({ status }),
-    });
-    setReports((rows) => rows.filter((r) => r.id !== id));
+    setActionError('');
+    try {
+      await api(`/api/reports/${id}`, {
+        method: 'PATCH',
+        token,
+        body: JSON.stringify({ status }),
+      });
+      setReports((rows) => rows.filter((r) => r.id !== id));
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Could not update report');
+    }
   }
 
   async function reviewVerification(id: string, status: 'approved' | 'rejected') {
     if (!token) return;
-    await api(`/api/verifications/${id}/review`, {
-      method: 'PATCH',
-      token,
-      body: JSON.stringify({ status }),
-    });
-    setVerifications((rows) => rows.filter((v) => v.id !== id));
+    setActionError('');
+    try {
+      await api(`/api/verifications/${id}/review`, {
+        method: 'PATCH',
+        token,
+        body: JSON.stringify({ status }),
+      });
+      setVerifications((rows) => rows.filter((v) => v.id !== id));
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Could not review verification');
+    }
   }
 
   if (isLoading || loading) {
@@ -109,16 +121,21 @@ export default function AdminPage() {
       </div>
 
       {error && <p className="text-red-600">{error}</p>}
+      {actionError && <p className="text-red-600">{actionError}</p>}
 
       {tab === 'reports' && (
         <ul className="space-y-3">
           {reports.map((r) => (
             <li key={r.id} className="rounded-lg border border-black/8 bg-white/90 p-4">
               <p className="text-sm font-medium">
-                {r.target_type} · reported by {r.reporter.name}
+                {r.target_type}
+                {r.target?.title ? ` · ${r.target.title}` : ''}
+                {r.target?.name ? ` · ${r.target.name}` : ''}
+                {r.target?.email ? ` (${r.target.email})` : ''}
               </p>
+              <p className="text-xs text-ink/50">Reported by {r.reporter.name}</p>
               <p className="mt-1 text-sm text-ink/70">{r.reason}</p>
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                 <Button onClick={() => patchReport(r.id, 'resolved')}>Resolve</Button>
                 <Button variant="ghost" onClick={() => patchReport(r.id, 'dismissed')}>
                   Dismiss
@@ -145,7 +162,7 @@ export default function AdminPage() {
                   <Image src={v.face_image_url} alt="Face" fill className="object-cover" sizes="112px" />
                 </div>
               </div>
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                 <Button onClick={() => reviewVerification(v.id, 'approved')}>Approve</Button>
                 <Button variant="danger" onClick={() => reviewVerification(v.id, 'rejected')}>
                   Reject

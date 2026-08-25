@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -21,8 +22,6 @@ export default function ListingDetailPage() {
   const [error, setError] = useState('');
   const [offerOpen, setOfferOpen] = useState(false);
   const [offerAmount, setOfferAmount] = useState('');
-  const [message, setMessage] = useState('');
-  const [chatOpen, setChatOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
 
@@ -75,37 +74,6 @@ export default function ListingDetailPage() {
     }
   }
 
-  async function sendMessage(e: FormEvent) {
-    e.preventDefault();
-    if (!token || !user || !listing) {
-      router.push(`/auth/login?next=/listings/${id}`);
-      return;
-    }
-    setBusy(true);
-    try {
-      // REST create via socket fallback: offer endpoint pattern — use notifications path
-      // Messages go through socket; also persist via a simple fetch to chat if needed.
-      const { io } = await import('socket.io-client');
-      const { getApiUrl } = await import('@/lib/api');
-      const socket = io(getApiUrl(), { transports: ['websocket'] });
-      socket.emit('join_room', { listingId: listing.id, userId: user.id });
-      socket.emit('send_message', {
-        listingId: listing.id,
-        senderId: user.id,
-        receiverId: listing.seller_id,
-        content: message,
-      });
-      setNote('Message sent.');
-      setMessage('');
-      setChatOpen(false);
-      socket.disconnect();
-    } catch (err) {
-      setNote(err instanceof Error ? err.message : 'Could not send message');
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function reportListing() {
     if (!token) {
       router.push(`/auth/login?next=/listings/${id}`);
@@ -137,11 +105,15 @@ export default function ListingDetailPage() {
   }
 
   const images = listing.images?.length ? listing.images : ['/placeholder-listing.svg'];
+  const canAct = user?.id !== listing.seller_id;
+  const chatHref = user
+    ? `/chat/${listing.id}?with=${listing.seller?.id ?? listing.seller_id}`
+    : `/auth/login?next=${encodeURIComponent(`/chat/${listing.id}?with=${listing.seller?.id ?? listing.seller_id}`)}`;
 
   return (
-    <div className="grid gap-8 lg:grid-cols-2">
+    <div className="grid gap-8 pb-24 lg:grid-cols-2 lg:pb-0">
       <div className="space-y-3">
-        <div className="relative aspect-square overflow-hidden rounded-xl bg-stone-100">
+        <div className="relative aspect-square overflow-hidden rounded-3xl bg-stone-100 shadow-card">
           <Image
             src={images[activeImg]}
             alt={listing.title}
@@ -152,13 +124,15 @@ export default function ListingDetailPage() {
           />
         </div>
         {images.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto">
+          <div className="flex gap-2 overflow-x-auto pb-1">
             {images.map((src, i) => (
               <button
                 key={src + i}
                 type="button"
                 onClick={() => setActiveImg(i)}
-                className={`relative h-16 w-16 shrink-0 overflow-hidden rounded border ${i === activeImg ? 'border-brand-600' : 'border-black/10'}`}
+                className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition ${
+                  i === activeImg ? 'border-brand-600' : 'border-transparent opacity-80 hover:opacity-100'
+                }`}
               >
                 <Image src={src} alt="" fill className="object-cover" sizes="64px" />
               </button>
@@ -167,36 +141,55 @@ export default function ListingDetailPage() {
         )}
       </div>
 
-      <div className="space-y-4">
-        <div className="space-y-2">
+      <div className="space-y-5">
+        <div className="space-y-3">
           <Badge tone="amber">{listing.condition.replace('_', ' ')}</Badge>
-          <h1 className="font-display text-3xl font-semibold">{listing.title}</h1>
-          <p className="text-2xl font-bold text-brand-700">
+          <h1 className="font-display text-3xl font-semibold leading-tight">{listing.title}</h1>
+          <p className="text-3xl font-bold tracking-tight text-brand-700">
             {listing.price.toLocaleString()} ETB
           </p>
-          <p className="text-sm text-ink/70">
-            {listing.location}
-            {listing.seller ? ` · Seller: ${listing.seller.name}` : ''}
-            {listing.seller?.is_verified ? ' ✓ Verified' : ''}
-          </p>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-ink/70">
+            <span>{listing.location}</span>
+            {listing.seller && (
+              <span className="rounded-full bg-stone-100 px-2.5 py-1">
+                {listing.seller.name}
+                {listing.seller.is_verified ? ' · Verified' : ''}
+              </span>
+            )}
+          </div>
         </div>
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink/85">
           {listing.description}
         </p>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <Button onClick={buyNow} loading={busy}>
-            Buy Now
-          </Button>
-          <Button variant="secondary" onClick={() => setOfferOpen(true)}>
-            Make Offer
-          </Button>
-          <Button variant="ghost" onClick={() => setChatOpen(true)}>
-            Message Seller
-          </Button>
+          {canAct && (
+            <Button onClick={buyNow} loading={busy} className="min-w-[8rem]">
+              Buy Now
+            </Button>
+          )}
+          {canAct && (
+            <Link href={chatHref}>
+              <Button variant="ghost" className="w-full sm:w-auto">
+                Message Seller
+              </Button>
+            </Link>
+          )}
+          {canAct && (
+            <Button variant="secondary" onClick={() => setOfferOpen(true)}>
+              Make Offer
+            </Button>
+          )}
+          {user && (user.id === listing.seller_id || user.role === 'admin') && (
+            <Link href={`/listings/${listing.id}/edit`}>
+              <Button variant="ghost" className="w-full sm:w-auto">
+                Edit listing
+              </Button>
+            </Link>
+          )}
         </div>
 
-        {note && <p className="text-sm text-brand-700">{note}</p>}
+        {note && <p className="rounded-xl bg-brand-50 px-3 py-2 text-sm text-brand-800">{note}</p>}
 
         <button
           type="button"
@@ -207,11 +200,36 @@ export default function ListingDetailPage() {
         </button>
       </div>
 
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-black/10 bg-white/95 p-3 backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-6xl items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{listing.price.toLocaleString()} ETB</p>
+            <p className="truncate text-xs text-ink/50">{listing.title}</p>
+          </div>
+          {canAct && (
+            <Link href={chatHref}>
+              <Button variant="ghost" className="px-3">
+                Chat
+              </Button>
+            </Link>
+          )}
+          {canAct ? (
+            <Button onClick={buyNow} loading={busy}>
+              Buy Now
+            </Button>
+          ) : (
+            <Button variant="secondary" onClick={() => setOfferOpen(true)}>
+              Offer
+            </Button>
+          )}
+        </div>
+      </div>
+
       {offerOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
           <form
             onSubmit={sendOffer}
-            className="w-full max-w-md space-y-4 rounded-xl bg-white p-5 shadow-lg"
+            className="w-full max-w-md space-y-4 rounded-2xl bg-white p-5 shadow-lift"
           >
             <h2 className="font-display text-xl font-semibold">Make an offer</h2>
             <Input
@@ -227,32 +245,6 @@ export default function ListingDetailPage() {
                 Send offer
               </Button>
               <Button type="button" variant="ghost" onClick={() => setOfferOpen(false)}>
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {chatOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
-          <form
-            onSubmit={sendMessage}
-            className="w-full max-w-md space-y-4 rounded-xl bg-white p-5 shadow-lg"
-          >
-            <h2 className="font-display text-xl font-semibold">Message seller</h2>
-            <textarea
-              required
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              className="min-h-[100px] w-full rounded-md border border-black/10 p-3 text-sm outline-none ring-brand-500 focus:ring-2"
-              placeholder="Ask about condition, meetup, etc."
-            />
-            <div className="flex gap-2">
-              <Button type="submit" loading={busy}>
-                Send
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => setChatOpen(false)}>
                 Cancel
               </Button>
             </div>

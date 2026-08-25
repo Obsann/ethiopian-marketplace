@@ -70,10 +70,20 @@ export async function initializePayment(req: AuthRequest, res: Response) {
   if (!buyer) return sendError(res, 'Buyer not found', 404);
 
   const tx_ref = `etm-${randomUUID()}`;
+  if (!process.env.CHAPA_CALLBACK_URL) {
+    if (process.env.NODE_ENV === 'production') {
+      return sendError(
+        res,
+        'CHAPA_CALLBACK_URL is not set. Webhooks cannot be received in production.',
+        500
+      );
+    }
+    console.warn('⚠ CHAPA_CALLBACK_URL is not set — falling back to localhost verify URL');
+  }
   const callback_url =
     process.env.CHAPA_CALLBACK_URL ||
     `http://localhost:${process.env.PORT || 4000}/api/payments/verify`;
-  const return_url = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/listings/${listing.id}?paid=1`;
+  const return_url = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payments/success?tx_ref=${tx_ref}&listing_id=${listing.id}`;
 
   try {
     const chapa = await chapaInitialize({
@@ -116,7 +126,7 @@ export async function initializePayment(req: AuthRequest, res: Response) {
 function verifyChapaSignature(req: AuthRequest): boolean {
   const secret = process.env.CHAPA_WEBHOOK_SECRET;
   if (!secret) {
-    // Allow in local/dev without webhook secret
+    console.warn('⚠ Chapa webhook secret not set — skipping signature check');
     return true;
   }
   const signature = req.headers['x-chapa-signature'] || req.headers['chapa-signature'];
@@ -165,6 +175,16 @@ export async function verifyPayment(req: AuthRequest, res: Response) {
         ],
       });
     });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user:${transaction.buyer_id}`).emit('payment_confirmed', {
+        tx_ref,
+        listing_id: transaction.listing_id,
+        transaction_id: transaction.id,
+      });
+    }
+
     return sendSuccess(res, { status: 'held' }, 'Payment verified and held');
   }
 

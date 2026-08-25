@@ -15,7 +15,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
   return (
     <Link
       href={`/listings/${listing.id}`}
-      className="group block overflow-hidden rounded-lg border border-black/8 bg-white transition hover:border-brand-500/40"
+      className="group block overflow-hidden rounded-2xl border border-black/8 bg-white shadow-card transition duration-200 hover:-translate-y-0.5 hover:border-brand-500/30 hover:shadow-lift"
     >
       <div className="relative aspect-[4/3] bg-stone-100">
         <Image
@@ -23,20 +23,29 @@ export function ListingCard({ listing }: { listing: Listing }) {
           alt={listing.title}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          className="object-cover transition group-hover:scale-[1.02]"
+          className="object-cover transition duration-300 group-hover:scale-[1.04]"
         />
-      </div>
-      <div className="space-y-2 p-3">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="line-clamp-2 text-sm font-semibold leading-snug">{listing.title}</h3>
+        <div className="absolute left-2 top-2">
           <Badge tone={conditionTone[listing.condition] || 'gray'}>
             {listing.condition.replace('_', ' ')}
           </Badge>
         </div>
-        <p className="text-base font-bold text-brand-700">
+      </div>
+      <div className="space-y-2 p-3.5">
+        <h3 className="line-clamp-2 text-sm font-semibold leading-snug group-hover:text-brand-700">
+          {listing.title}
+        </h3>
+        <p className="text-lg font-bold tracking-tight text-brand-700">
           {listing.price.toLocaleString()} ETB
         </p>
-        <p className="text-xs text-ink/60">{listing.location}</p>
+        <div className="flex items-center justify-between gap-2 text-xs text-ink/60">
+          <span className="truncate">{listing.location}</span>
+          {listing.seller?.is_verified && (
+            <span className="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 font-medium text-brand-700">
+              Verified
+            </span>
+          )}
+        </div>
       </div>
     </Link>
   );

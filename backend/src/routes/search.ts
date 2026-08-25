@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import * as listingsController from '../controllers/listings';
+import * as searchController from '../controllers/search';
+import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();
 
-// Search aliases onto listings filters
-router.get('/', listingsController.getListings);
+router.get('/', asyncHandler(searchController.searchListings));
 
 export default router;
