@@ -81,9 +81,15 @@ body {
   top: 0 !important;
 }
 
+/* Kill gadget chrome / "Powered by" leftover text nodes */
 .goog-te-gadget {
+  display: flex !important;
+  align-items: center !important;
+  margin: 0 !important;
   font-family: inherit !important;
-  color: var(--ink) !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  color: transparent !important;
 }
 
 .goog-te-gadget .goog-te-combo {
@@ -110,6 +116,27 @@ body {
 }
 
 .goog-te-gadget > span,
-.goog-logo-link {
+.goog-te-gadget .goog-te-combo + *,
+.goog-logo-link,
+.goog-te-gadget a {
   display: none !important;
+}
+
+/* Header mount: single-line, no extra height from branding */
+#google_translate_header_target {
+  display: flex;
+  align-items: center;
+  height: auto;
+  line-height: 0;
+  overflow: hidden;
+}
+
+#google_translate_header_target .goog-te-gadget {
+  display: flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+}
+
+#google_translate_element {
+  line-height: 0;
 }
