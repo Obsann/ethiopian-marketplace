@@ -2,8 +2,16 @@ import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import type SMTPTransport from 'nodemailer/lib/smtp-transport';
 
+const RESEND_API = 'https://api.resend.com/emails';
+/** Resend onboarding/test sender — production needs a verified domain From address. */
+const RESEND_TEST_FROM = 'SuqET <onboarding@resend.dev>';
+
 function frontendUrl(): string {
   return (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
+}
+
+function resendApiKey(): string {
+  return (process.env.RESEND_API_KEY || '').trim();
 }
 
 function smtpHost(): string {
@@ -24,29 +32,52 @@ function smtpPort(): number {
   return Number(process.env.SMTP_PORT || 587);
 }
 
-export function isMailConfigured(): boolean {
+export function isResendConfigured(): boolean {
+  return Boolean(resendApiKey());
+}
+
+export function isSmtpConfigured(): boolean {
   return Boolean(smtpHost() && smtpUser() && smtpPass());
 }
 
-/**
- * Gmail (and most hosts) reject From addresses that are not the authenticated
- * mailbox. A leftover SMTP_FROM like "SuqET <noreply@localhost>" is a common
- * reason "SMTP is set" but nothing arrives.
- */
-export function resolveFromAddress(): string {
-  const user = smtpUser();
-  const configured = (process.env.SMTP_FROM || '').trim();
+/** True when Resend or SMTP can send mail. */
+export function isMailConfigured(): boolean {
+  return isResendConfigured() || isSmtpConfigured();
+}
+
+function isUnusableFrom(configured: string): boolean {
   const inner = configured.match(/<([^>]+)>/)?.[1] || configured;
-  const unusable =
+  return (
     !configured ||
     /localhost|example\.com/i.test(inner) ||
-    !inner.includes('@');
-  if (!unusable) return configured;
+    !inner.includes('@')
+  );
+}
+
+/**
+ * Prefer EMAIL_FROM, then SMTP_FROM.
+ * Resend needs a verified-domain address in production (not *.vercel.app).
+ * Without a usable From + Resend: fall back to Resend's onboarding test sender.
+ * Gmail SMTP rejects From addresses that are not the authenticated mailbox.
+ */
+export function resolveFromAddress(): string {
+  const emailFrom = (process.env.EMAIL_FROM || '').trim();
+  const smtpFrom = (process.env.SMTP_FROM || '').trim();
+  const configured = emailFrom || smtpFrom;
+
+  if (!isUnusableFrom(configured)) return configured;
+
+  if (isResendConfigured()) return RESEND_TEST_FROM;
+
+  const user = smtpUser();
   if (user.includes('@')) return `SuqET <${user}>`;
   return configured || 'SuqET <noreply@localhost>';
 }
 
 function publicMailError(err: unknown): Error {
+  if (err instanceof Error && /Resend|EMAIL_FROM|rate limit/i.test(err.message)) {
+    return err;
+  }
   const code =
     err && typeof err === 'object' && 'code' in err ? String((err as { code?: string }).code) : '';
   const responseCode =
@@ -98,29 +129,101 @@ export function verifyEmailUrl(token: string): string {
   return `${frontendUrl()}/auth/verify-email?token=${encodeURIComponent(token)}`;
 }
 
-async function sendMail(opts: { to: string; subject: string; text: string; html: string }): Promise<void> {
-  if (!isMailConfigured()) {
-    console.warn(`[mail] SMTP not configured. Skip send: ${opts.subject}`);
-    return;
-  }
-  try {
-    await transporter().sendMail({
-      from: resolveFromAddress(),
-      to: opts.to,
+async function sendViaResend(opts: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+}): Promise<void> {
+  const from = resolveFromAddress();
+  const res = await fetch(RESEND_API, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${resendApiKey()}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from,
+      to: [opts.to],
       subject: opts.subject,
       text: opts.text,
       html: opts.html,
-    });
-  } catch (err) {
-    console.error('[mail] send failed', publicMailError(err).message, {
-      code: err && typeof err === 'object' && 'code' in err ? (err as { code?: string }).code : undefined,
-      responseCode:
-        err && typeof err === 'object' && 'responseCode' in err
-          ? (err as { responseCode?: number }).responseCode
-          : undefined,
-    });
-    throw publicMailError(err);
+    }),
+  });
+
+  const body = (await res.json().catch(() => null)) as {
+    id?: string;
+    message?: string;
+    name?: string;
+    statusCode?: number;
+  } | null;
+
+  if (!res.ok) {
+    const detail = body?.message || `Resend HTTP ${res.status}`;
+    console.error('[mail] Resend send failed', { status: res.status, detail, name: body?.name });
+    if (res.status === 401) {
+      throw new Error('Resend API key was rejected. Check RESEND_API_KEY on the server.');
+    }
+    if (res.status === 403 || /domain|not verified|from/i.test(detail)) {
+      throw new Error(
+        'Resend rejected the From address. Set EMAIL_FROM to an address on a verified domain (not *.vercel.app).'
+      );
+    }
+    if (res.status === 429) {
+      throw new Error('Email rate limit reached. Try again shortly.');
+    }
+    throw new Error('Could not send email via Resend. Try again later.');
   }
+}
+
+async function sendViaSmtp(opts: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+}): Promise<void> {
+  await transporter().sendMail({
+    from: resolveFromAddress(),
+    to: opts.to,
+    subject: opts.subject,
+    text: opts.text,
+    html: opts.html,
+  });
+}
+
+/**
+ * Prefer Resend when RESEND_API_KEY is set (Render / production).
+ * Else SMTP when SMTP_* is set (local/dev).
+ * Else log and skip (non-prod callers still return reset/verify URLs).
+ */
+async function sendMail(opts: { to: string; subject: string; text: string; html: string }): Promise<void> {
+  if (isResendConfigured()) {
+    try {
+      await sendViaResend(opts);
+      return;
+    } catch (err) {
+      console.error('[mail] send failed', publicMailError(err).message);
+      throw publicMailError(err);
+    }
+  }
+
+  if (isSmtpConfigured()) {
+    try {
+      await sendViaSmtp(opts);
+      return;
+    } catch (err) {
+      console.error('[mail] send failed', publicMailError(err).message, {
+        code: err && typeof err === 'object' && 'code' in err ? (err as { code?: string }).code : undefined,
+        responseCode:
+          err && typeof err === 'object' && 'responseCode' in err
+            ? (err as { responseCode?: number }).responseCode
+            : undefined,
+      });
+      throw publicMailError(err);
+    }
+  }
+
+  console.warn(`[mail] No RESEND_API_KEY or SMTP configured. Skip send: ${opts.subject}`);
 }
 
 export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {

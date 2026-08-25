@@ -35,7 +35,7 @@ This README is for **hackathon judges**: what the product is, what the demo prov
 
 - **Not live escrow.** “Released” / “refunded” update **our database**. They do not automatically pay the seller or reverse a real bank transfer.
 - **Chapa is TEST mode** with a real `CHASECK_TEST-…` key. If the key still contains the `xxx` placeholder, Buy Now uses an **in-app mock** checkout — not a bank transfer.
-- Email (Gmail SMTP) is optional. Hosted platforms often block outbound SMTP; local demo works without mail.
+- Email is optional locally (API returns reset/verify links when mail is unset). On Render use **Resend** (`RESEND_API_KEY`) — outbound SMTP is often blocked.
 
 ---
 
@@ -105,11 +105,11 @@ On Render, Cloudinary is strongly recommended (ephemeral disk).
 
 ## Auth
 
-- **Email / password** — register, login, logout; optional forgot/reset and email verify when SMTP is configured.
+- **Email / password** — register, login, logout; optional forgot/reset and email verify when Resend or SMTP is configured.
 - **Google OAuth** (optional) — after Google redirects, the frontend exchanges a **one-time code** via `POST /api/auth/oauth/exchange`. The session JWT is **not** left in the URL.
 - **Session** — httpOnly cookie `etm_sid`. In production (`NODE_ENV=production`), cookie is `Secure` + `SameSite=None` so login works across **Vercel (web) → Render (API)** with `credentials: 'include'`.
 
-Requires `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_CALLBACK_URL` in `backend/.env` for Google sign-in.
+Requires `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_CALLBACK_URL` on the **API** (Render / `backend/.env`) for Google sign-in. The login/register **Continue with Google** button is shown only when `GET /api/auth/providers` returns `{ data: { google: true } }` — there is no `NEXT_PUBLIC_*` Google client id on Vercel.
 
 ---
 
@@ -279,7 +279,13 @@ Split hosting:
 | `CHAPA_SECRET_KEY` | for TEST pay | Real `CHASECK_TEST-…` (not `xxx` placeholder) |
 | `CHAPA_WEBHOOK_SECRET` | for webhooks | Dashboard webhook secret |
 | `CHAPA_CALLBACK_URL` | for Chapa | e.g. `https://suqet-api.onrender.com/api/payments/callback` |
-| Cloudinary / SMTP / Google | optional | Same names as `backend/.env.example` |
+| Cloudinary | optional | Same names as `backend/.env.example` |
+| `RESEND_API_KEY` | for email on Render | From [resend.com/api-keys](https://resend.com/api-keys). Prefer over SMTP (SMTP often blocked). |
+| `EMAIL_FROM` | with Resend | Verified-domain address, e.g. `SuqET <noreply@yourdomain.com>`. Not `*.vercel.app`. Test: `SuqET <onboarding@resend.dev>`. |
+| SMTP_* | local/dev only | Optional fallback when `RESEND_API_KEY` is unset. |
+| `GOOGLE_CLIENT_ID` | for Google | Web client ID from Google Cloud Console |
+| `GOOGLE_CLIENT_SECRET` | for Google | Web client secret (API only — never in `web/`) |
+| `GOOGLE_CALLBACK_URL` | for Google | Must match Console redirect URI exactly, e.g. `https://suqet-api.onrender.com/api/auth/google/callback` |
 
 Chapa Test webhook URL in the dashboard:
 
@@ -300,11 +306,32 @@ Callback URL must match `CHAPA_CALLBACK_URL`.
 |----------|--------|
 | `NEXT_PUBLIC_API_URL` | Public Render API URL, e.g. `https://suqet-api.onrender.com` — **no trailing slash** (must match how the client concatenates paths) |
 
-`NEXT_PUBLIC_*` is inlined at **build** time — redeploy after changing it. Do **not** put Chapa, Cloudinary, JWT, or DB secrets in Vercel / `web/`.
+`NEXT_PUBLIC_*` is inlined at **build** time — redeploy after changing it. Do **not** put Chapa, Cloudinary, JWT, Google client secret, or DB secrets in Vercel / `web/`.
 
 5. Deploy. Paste the production URL into the **Hosted demo** row at the top of this README.
 
-### 3. Cross-origin (cookies + CORS)
+### 3. Google OAuth (Vercel + Render + Google Cloud Console)
+
+The UI does **not** use a public Google client id. Flow: browser → Render `GET /api/auth/google` → Google → Render `GET /api/auth/google/callback` → redirect to Vercel `/auth/oauth` → `POST /api/auth/oauth/exchange`.
+
+**Why the button is missing after deploy:** `GoogleSignInButton` calls `GET {NEXT_PUBLIC_API_URL}/api/auth/providers` and renders only if `data.google === true`. That flag is true only when **all three** Google env vars are set on Render. If the fetch fails (wrong `NEXT_PUBLIC_API_URL`, or CORS because `FRONTEND_URL` ≠ your Vercel origin), the button stays hidden even when Google is configured.
+
+| Where | What to set |
+|-------|-------------|
+| **Render** | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL=https://suqet-api.onrender.com/api/auth/google/callback` (no trailing slash on host; path exact). Also `FRONTEND_URL` = your Vercel origin. Redeploy/restart API after changes. |
+| **Vercel** | Only `NEXT_PUBLIC_API_URL=https://suqet-api.onrender.com`. **No** `NEXT_PUBLIC_GOOGLE_*`. Redeploy after changing it. |
+| **Google Cloud Console** | APIs & Services → Credentials → OAuth 2.0 **Web** client |
+
+**Google Cloud Console URIs** (must match production exactly):
+
+| Field | Value |
+|-------|--------|
+| Authorized JavaScript origins | Your Vercel origin, e.g. `https://ethiopian-marketplace-opal.vercel.app` (and `http://localhost:3000` for local). Optional: API origin is not required for this server-side redirect flow. |
+| Authorized redirect URIs | `https://suqet-api.onrender.com/api/auth/google/callback` (must equal `GOOGLE_CALLBACK_URL`) |
+
+**Quick check:** open `https://suqet-api.onrender.com/api/auth/providers` — expect `"google": true`. On the Vercel login page, DevTools → Network: providers request must succeed (not blocked by CORS).
+
+### 4. Cross-origin (cookies + CORS)
 
 The browser calls the Render API from the Vercel origin with `credentials: 'include'`. Session cookie is `etm_sid`.
 
@@ -317,13 +344,14 @@ The browser calls the Render API from the Vercel origin with `credentials: 'incl
 
 After the first Vercel deploy: copy the Vercel URL → set Render `FRONTEND_URL` → restart/redeploy API → confirm login still sets `etm_sid` and chat connects.
 
-### 4. Smoke-test
+### 5. Smoke-test
 
 1. `GET https://<api>/api/health`
-2. Open the Vercel site → log in (Sara) → browse → chat → Buy Now
-3. Confirm order status after return / sync
+2. `GET https://<api>/api/auth/providers` → `"google": true` if OAuth env is set
+3. Open the Vercel site → log in (Sara or Google) → browse → chat → Buy Now
+4. Confirm order status after return / sync
 
-Honest limits still apply: **Chapa TEST**, escrow is **DB-only** (`held` / `released` / `refunded`), SMTP often blocked on hosted platforms.
+Honest limits still apply: **Chapa TEST**, escrow is **DB-only** (`held` / `released` / `refunded`), use **Resend** for mail on Render (SMTP often blocked).
 
 Do **not** commit `.env` / `.env.local`.
 

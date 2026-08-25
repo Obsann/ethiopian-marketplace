@@ -52,6 +52,12 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+      # Prefer Resend on Render (SMTP outbound is often blocked).
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      # Optional local/SMTP fallback — usually leave unset on Render.
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT
