@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import Script from 'next/script';
-import { useAuth } from '@/lib/auth';
 
 declare global {
   interface Window {
@@ -24,47 +23,47 @@ declare global {
   }
 }
 
-const FIXED_STYLE = 'position:fixed;bottom:16px;left:16px;z-index:9999;';
 const HEADER_STYLE = 'position:static;';
 
 /**
  * Persistent Google Translate Element.
- * Logged out → fixed bottom-left on body host.
- * Logged in → teleported into #google_translate_header_target (Navbar).
+ * Always teleports #google_translate_element into #google_translate_header_target (Navbar).
+ * Falls back to an off-layout body host until the header target mounts, then moves.
  * Init callback is defined in root layout beforeInteractive; element.js uses cb= only.
  */
 export function GoogleTranslate() {
-  const { user, isLoading } = useAuth();
-  const bodyHostRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
-    if (isLoading) return;
-
-    const el = document.getElementById('google_translate_element');
-    const bodyHost = bodyHostRef.current;
-    const headerTarget = document.getElementById('google_translate_header_target');
-    if (!el || !bodyHost) return;
-
-    if (user && headerTarget) {
+    const moveToHeader = () => {
+      const el = document.getElementById('google_translate_element');
+      const headerTarget = document.getElementById('google_translate_header_target');
+      if (!el || !headerTarget) return false;
       el.setAttribute('style', HEADER_STYLE);
       if (el.parentElement !== headerTarget) {
         headerTarget.appendChild(el);
       }
-    } else {
-      el.setAttribute('style', FIXED_STYLE);
-      if (el.parentElement !== bodyHost) {
-        bodyHost.appendChild(el);
-      }
-    }
-  }, [user, isLoading]);
+      return true;
+    };
+
+    if (moveToHeader()) return;
+
+    // Header target may not exist on first paint; retry briefly until Navbar mounts.
+    let tries = 0;
+    const maxTries = 40;
+    const timer = setInterval(() => {
+      tries += 1;
+      if (moveToHeader() || tries >= maxTries) clearInterval(timer);
+    }, 50);
+
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <>
-      <div ref={bodyHostRef} id="google_translate_body_host">
+      {/* Fallback host until Navbar header target is available */}
+      <div id="google_translate_body_host" className="sr-only" aria-hidden>
         <div
           id="google_translate_element"
           className="notranslate"
-          style={{ position: 'fixed', bottom: 16, left: 16, zIndex: 9999 }}
           aria-label="Translate page language"
         />
       </div>
