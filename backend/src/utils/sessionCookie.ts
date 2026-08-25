@@ -19,10 +19,11 @@ export function readSessionToken(req: AuthRequest): string | null {
 }
 
 export function setSessionCookie(res: Response, token: string): void {
+  // Production web + API are different onrender.com hosts (cross-site). Lax is not sent on XHR.
   const secure = process.env.NODE_ENV === 'production';
   res.cookie(COOKIE, token, {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: secure ? 'none' : 'lax',
     secure,
     path: '/',
     maxAge: maxAgeMs,
@@ -30,5 +31,10 @@ export function setSessionCookie(res: Response, token: string): void {
 }
 
 export function clearSessionCookie(res: Response): void {
-  res.clearCookie(COOKIE, { path: '/' });
+  const secure = process.env.NODE_ENV === 'production';
+  res.clearCookie(COOKIE, {
+    path: '/',
+    sameSite: secure ? 'none' : 'lax',
+    secure,
+  });
 }

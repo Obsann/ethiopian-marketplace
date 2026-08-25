@@ -8,6 +8,9 @@
     "start": "next start",
     "lint": "next lint"
   },
+  "engines": {
+    "node": ">=18.17"
+  },
   "dependencies": {
     "js-cookie": "^3.0.5",
     "next": "14.2.18",

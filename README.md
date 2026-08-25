@@ -9,7 +9,7 @@ This README is written for **hackathon judges**: clear about what the demo prove
 | Submission item | Link |
 |-----------------|------|
 | GitHub repo | https://github.com/kikemal/ethiopian-marketplace |
-| Hosted demo | _add public URL before submission_ |
+| Hosted demo | `https://suqet-web.onrender.com` _(replace after Render deploy)_ |
 | Video walkthrough | _add video URL before submission_ |
 
 ---
@@ -168,13 +168,92 @@ Requires `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_CALLBACK_URL` i
 
 ## Deploy
 
-Production target: **Render** (API + PostgreSQL + web).
+Production target: **Render** (PostgreSQL + Express API + Next.js 14 App Router). App Router needs a **Web Service** (Node), not Static Site.
 
-| Item | Status |
+`render.yaml` at the repo root is a Blueprint for three resources:
+
+| Resource | Name | Role |
+|----------|------|------|
+| Postgres | `suqet-db` | `DATABASE_URL` |
+| Web Service | `suqet-api` | Express API (`backend/`) |
+| Web Service | `suqet-web` | Next.js (`web/`) |
+
+Secrets stay on the API service only. The web service only gets `NEXT_PUBLIC_API_URL` (public API origin). Google Translate needs no special deploy config.
+
+### Build / start commands (also in `render.yaml`)
+
+**API (`rootDir: backend`)**
+
+- Build: `npm install --include=dev && npm run build`  
+  (`build` runs `prisma generate && tsc`)
+- Start: `npx prisma migrate deploy && node dist/server.js`
+- Health check: `GET /api/health`
+- Fixed env: `NODE_ENV=production`, `TRUST_PROXY=true`
+
+**Web (`rootDir: web`)**
+
+- Build: `npm install --include=dev && npm run build` (`next build`)
+- Start: `npm start` (`next start`)
+- Fixed env: `NODE_ENV=production`
+
+`NEXT_PUBLIC_API_URL` is inlined at **build** time. Set it to the public API HTTPS URL, then **Manual Deploy → Clear build cache & deploy** on `suqet-web` if you change it.
+
+### Env checklist (names only — set values in Render)
+
+**`suqet-api`**
+
+| Name | Notes |
 |------|--------|
-| Hosted demo URL | _add public URL before submission_ |
-| Infra config | `render.yaml` when present in the repo root (Blueprint) |
+| `DATABASE_URL` | From Render Postgres (Blueprint wires this) |
+| `NODE_ENV` | `production` |
+| `TRUST_PROXY` | `true` |
+| `JWT_SECRET` | Long random string (Blueprint can generate) |
+| `JWT_EXPIRES_IN` | e.g. `7d` |
+| `FRONTEND_URL` | Public Next origin, e.g. `https://suqet-web.onrender.com` (CORS + Socket.io + email links) |
+| `BACKEND_PUBLIC_URL` | Public API origin, e.g. `https://suqet-api.onrender.com` |
+| `CHAPA_SECRET_KEY` | Dashboard Test key (`CHASECK_TEST-…`) for demo |
+| `CHAPA_WEBHOOK_SECRET` | Dashboard webhook secret |
+| `CHAPA_CALLBACK_URL` | `https://<suqet-api-host>/api/payments/callback` |
+| `CLOUDINARY_CLOUD_NAME` | Optional but recommended on Render (ephemeral disk) |
+| `CLOUDINARY_API_KEY` | Optional |
+| `CLOUDINARY_API_SECRET` | Optional |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Optional; Render often blocks outbound SMTP — prefer skipping mail for the demo or use a provider Render allows (e.g. Resend HTTP API is **not** wired in this repo) |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_CALLBACK_URL` | Optional Google sign-in |
 
-Secrets stay on the server (Render env vars mapped from `backend/.env` patterns). The web service only receives `NEXT_PUBLIC_API_URL` pointing at the public API.
+Session cookie: with `NODE_ENV=production` the API sets **Secure** + **SameSite=None** so login works across the two Render hosts. No separate `COOKIE_SECURE` env var.
+
+**`suqet-web`**
+
+| Name | Notes |
+|------|--------|
+| `NEXT_PUBLIC_API_URL` | Same public API origin as `BACKEND_PUBLIC_URL` (no trailing slash) |
+| `NODE_ENV` | `production` |
+
+### Dashboard steps (today)
+
+1. Open [Render Dashboard](https://dashboard.render.com) → **New** → **Blueprint**.
+2. Connect `kikemal/ethiopian-marketplace`, confirm branch `main`, Blueprint path `render.yaml`.
+3. Apply the Blueprint. When prompted (`sync: false` vars), you can leave optional secrets empty for a first boot, but set at least:
+   - `FRONTEND_URL` / `BACKEND_PUBLIC_URL` / `CHAPA_CALLBACK_URL` after you know the `*.onrender.com` hostnames (or set them on the second pass).
+4. Wait until **Postgres** and **`suqet-api`** are live. Copy the API URL.
+5. On **`suqet-web`**, set `NEXT_PUBLIC_API_URL=https://<suqet-api-host>` and redeploy with cleared build cache.
+6. On **`suqet-api`**, set `FRONTEND_URL=https://<suqet-web-host>`, `BACKEND_PUBLIC_URL=https://<suqet-api-host>`, and matching Chapa/Cloudinary values. Redeploy API.
+7. **Chapa dashboard** (Test mode): webhook URL `https://<suqet-api-host>/api/payments/verify` (see `CHAPA_WEBHOOK_SECRET`). Callback URL must match `CHAPA_CALLBACK_URL`. localhost cannot receive webhooks — public HTTPS is required.
+8. Smoke-test: `GET https://<suqet-api-host>/api/health`, then open the web URL, register/login, browse.
+
+Public URL placeholders (replace after deploy):
+
+- Web: `https://suqet-web.onrender.com`
+- API: `https://suqet-api.onrender.com`
+- Health: `https://suqet-api.onrender.com/api/health`
+- Chapa webhook: `https://suqet-api.onrender.com/api/payments/verify`
+
+### Manual create (if you skip Blueprint)
+
+1. **New → PostgreSQL** (keep the Internal/External Database URL for `DATABASE_URL`).
+2. **New → Web Service** → this repo → Root Directory `backend` → commands above → env checklist.
+3. **New → Web Service** → same repo → Root Directory `web` → commands above → `NEXT_PUBLIC_API_URL`.
+
+Do **not** commit `.env` / `.env.local`. Do not put Chapa/Cloudinary/JWT secrets in `web/`.
 
 Local Docker Compose remains the supported path for judges who prefer to run the stack themselves (see **Setup**).
