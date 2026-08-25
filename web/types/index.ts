@@ -2,6 +2,15 @@ export type UserRole = 'buyer' | 'seller' | 'admin';
 export type ListingStatus = 'active' | 'sold' | 'removed';
 export type ListingCondition = 'new' | 'like_new' | 'good' | 'fair';
 export type TransactionStatus = 'pending' | 'held' | 'released' | 'refunded' | 'failed';
+export type ReportTargetType = 'listing' | 'user';
+export type ReportStatus = 'open' | 'resolved' | 'dismissed';
+export type NotificationType =
+  | 'new_message'
+  | 'new_offer'
+  | 'listing_sold'
+  | 'verification_approved'
+  | 'verification_rejected'
+  | 'payment_failed';
 
 export interface User {
   id: string;
@@ -39,6 +48,15 @@ export interface Message {
   type?: 'text' | 'offer';
   offer_amount?: number | null;
   read_at: string | null;
+  created_at: string;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  message: string;
+  is_read: boolean;
   created_at: string;
 }
 

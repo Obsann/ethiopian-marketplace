@@ -174,7 +174,15 @@ function ListingDetail() {
             </div>
           )}
           {isOwn && (
-            <p className="text-sm text-ink/60">This is your listing.</p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <p className="text-sm text-ink/60">This is your listing.</p>
+              <Link
+                href={`/listings/${listing.id}/edit`}
+                className="text-sm font-medium text-brand-700 underline"
+              >
+                Edit listing
+              </Link>
+            </div>
           )}
 
           {note && <p className="text-sm text-brand-700">{note}</p>}

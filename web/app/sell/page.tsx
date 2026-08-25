@@ -89,21 +89,22 @@ export default function SellPage() {
       </div>
 
       {step === 1 && (
-        <div className="space-y-4 rounded-xl border border-black/8 bg-white/90 p-5">
+        <div className="space-y-4 rounded-2xl border border-black/8 bg-white p-5 shadow-card">
           <Input label="Title" value={form.title} onChange={(e) => update('title', e.target.value)} required />
           <label className="block space-y-1.5">
             <span className="text-sm font-medium">Description</span>
             <textarea
-              className="min-h-[100px] w-full rounded-md border border-black/10 p-3 text-sm"
+              className="field min-h-[100px]"
               value={form.description}
               onChange={(e) => update('description', e.target.value)}
               required
+              minLength={10}
             />
           </label>
           <label className="block space-y-1.5">
             <span className="text-sm font-medium">Category</span>
             <select
-              className="w-full rounded-md border border-black/10 px-3 py-2.5 text-sm"
+              className="field"
               value={form.category_id}
               onChange={(e) => update('category_id', e.target.value)}
               required
@@ -119,7 +120,7 @@ export default function SellPage() {
           <label className="block space-y-1.5">
             <span className="text-sm font-medium">Condition</span>
             <select
-              className="w-full rounded-md border border-black/10 px-3 py-2.5 text-sm"
+              className="field"
               value={form.condition}
               onChange={(e) => update('condition', e.target.value)}
             >
@@ -134,7 +135,13 @@ export default function SellPage() {
           <Button
             type="button"
             onClick={() => setStep(2)}
-            disabled={!form.title || !form.description || !form.category_id || !form.price || !form.location}
+            disabled={
+              form.title.trim().length < 3 ||
+              form.description.trim().length < 10 ||
+              !form.category_id ||
+              !form.price ||
+              form.location.trim().length < 2
+            }
           >
             Next: photos
           </Button>
@@ -142,8 +149,8 @@ export default function SellPage() {
       )}
 
       {step === 2 && (
-        <div className="space-y-4 rounded-xl border border-black/8 bg-white/90 p-5">
-          <label className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-black/20 bg-stone-50 px-4 text-center text-sm">
+        <div className="space-y-4 rounded-2xl border border-black/8 bg-white p-5 shadow-card">
+          <label className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-brand-500/30 bg-brand-50/50 px-4 text-center text-sm transition hover:bg-brand-50">
             <span className="font-medium">Drag & drop or click to upload</span>
             <span className="mt-1 text-ink/60">Up to 5 images (JPG/PNG)</span>
             <input
@@ -173,7 +180,7 @@ export default function SellPage() {
       )}
 
       {step === 3 && (
-        <form onSubmit={publish} className="space-y-4 rounded-xl border border-black/8 bg-white/90 p-5">
+        <form onSubmit={publish} className="space-y-4 rounded-2xl border border-black/8 bg-white p-5 shadow-card">
           <h2 className="font-display text-xl font-semibold">Preview</h2>
           <dl className="space-y-2 text-sm">
             <div><dt className="text-ink/50">Title</dt><dd className="font-medium">{form.title}</dd></div>

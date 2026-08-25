@@ -7,6 +7,7 @@ import { sendError, sendSuccess } from '../utils/response';
 import { uploadImageBuffer } from '../utils/cloudinary';
 import { isLikelyImageBuffer } from '../utils/kycStorage';
 import { messages } from '../utils/messages';
+import { idsMatchingFullText, mapListing } from '../utils/listings';
 
 const createSchema = z.object({
   title: z.string().min(3),
@@ -22,51 +23,10 @@ const updateSchema = z.object({
   description: z.string().min(10).optional(),
   price: z.coerce.number().positive().optional(),
   condition: z.enum(['new', 'like_new', 'good', 'fair']).optional(),
+  category_id: z.string().uuid().optional(),
   location: z.string().min(2).optional(),
-  status: z.enum(['active', 'removed']).optional(),
+  status: z.enum(['active', 'sold', 'removed']).optional(),
 });
-
-function mapListing(listing: {
-  id: string;
-  seller_id: string;
-  title: string;
-  description: string;
-  price: Prisma.Decimal;
-  condition: string;
-  category_id: string;
-  location: string;
-  status: string;
-  created_at: Date;
-  images?: { url: string; is_primary: boolean }[];
-  seller?: { id: string; name: string; is_verified: boolean; phone?: string };
-  view_count?: number;
-}) {
-  const images = (listing.images ?? [])
-    .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))
-    .map((i) => i.url);
-  return {
-    id: listing.id,
-    seller_id: listing.seller_id,
-    title: listing.title,
-    description: listing.description,
-    price: Number(listing.price),
-    condition: listing.condition,
-    category_id: listing.category_id,
-    location: listing.location,
-    status: listing.status,
-    images,
-    created_at: listing.created_at.toISOString(),
-    seller: listing.seller
-      ? {
-          id: listing.seller.id,
-          name: listing.seller.name,
-          is_verified: listing.seller.is_verified,
-        }
-      : undefined,
-    view_count: listing.view_count ?? 0,
-    primary_image: images[0] ?? null,
-  };
-}
 
 export async function createListing(req: AuthRequest, res: Response) {
   if (!req.user) return sendError(res, messages.unauthorized, 401);
@@ -76,7 +36,12 @@ export async function createListing(req: AuthRequest, res: Response) {
 
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
-    return sendError(res, 'Invalid listing data', 400, parsed.error.message);
+    return sendError(
+      res,
+      'Invalid listing data',
+      400,
+      JSON.stringify(parsed.error.flatten().fieldErrors)
+    );
   }
 
   const files = (req.files as Express.Multer.File[] | undefined) ?? [];
@@ -114,16 +79,6 @@ export async function createListing(req: AuthRequest, res: Response) {
   return sendSuccess(res, mapListing(listing), 'Listing created', 201);
 }
 
-function toSafeSearchQuery(raw: string): string | null {
-  const terms = raw
-    .replace(/['&|!:*()<>]/g, ' ')
-    .split(/\s+/)
-    .map((t) => t.trim())
-    .filter((t) => t.length >= 2);
-  if (!terms.length) return null;
-  return terms.map((t) => `${t}:*`).join(' & ');
-}
-
 export async function getListings(req: AuthRequest, res: Response) {
   const page = Math.max(1, Number(req.query.page) || 1);
   const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
@@ -145,18 +100,18 @@ export async function getListings(req: AuthRequest, res: Response) {
   }
 
   const query = req.query.query ? String(req.query.query).trim() : '';
-  const ilike: Prisma.ListingWhereInput[] = query
-    ? [
-        { title: { contains: query, mode: 'insensitive' } },
-        { description: { contains: query, mode: 'insensitive' } },
-      ]
-    : [];
-  const search = query ? toSafeSearchQuery(query) : null;
   if (query) {
-    const fts: Prisma.ListingWhereInput[] = search
-      ? [{ title: { search } }, { description: { search } }]
-      : [];
-    where.OR = [...fts, ...ilike];
+    const ids = await idsMatchingFullText(query);
+    if (ids === 'skip') {
+      /* no-op */
+    } else if (ids.length === 0) {
+      return sendSuccess(res, {
+        items: [],
+        pagination: { page, limit, total: 0, pages: 0 },
+      });
+    } else {
+      where.id = { in: ids };
+    }
   }
 
   const sort = String(req.query.sort || 'newest');
@@ -164,33 +119,19 @@ export async function getListings(req: AuthRequest, res: Response) {
   if (sort === 'price_asc') orderBy = { price: 'asc' };
   if (sort === 'price_desc') orderBy = { price: 'desc' };
 
-  const include = {
-    images: true,
-    seller: { select: { id: true, name: true, is_verified: true } },
-  } as const;
-
-  async function run(filter: Prisma.ListingWhereInput) {
-    return Promise.all([
-      prisma.listing.count({ where: filter }),
-      prisma.listing.findMany({
-        where: filter,
-        skip,
-        take: limit,
-        orderBy,
-        include,
-      }),
-    ]);
-  }
-
-  let total: number;
-  let rows: Awaited<ReturnType<typeof run>>[1];
-  try {
-    [total, rows] = await run(where);
-  } catch (err) {
-    if (!query || ilike.length === 0) throw err;
-    const fallback = { ...where, OR: ilike };
-    [total, rows] = await run(fallback);
-  }
+  const [total, rows] = await Promise.all([
+    prisma.listing.count({ where }),
+    prisma.listing.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy,
+      include: {
+        images: true,
+        seller: { select: { id: true, name: true, is_verified: true } },
+      },
+    }),
+  ]);
 
   return sendSuccess(res, {
     items: rows.map(mapListing),
@@ -210,6 +151,11 @@ export async function getListingById(req: AuthRequest, res: Response) {
   });
   if (!listing || listing.status === 'removed') {
     return sendError(res, messages.listingRemoved, 404);
+  }
+
+  const countView = req.query.count_view !== '0' && req.query.count_view !== 'false';
+  if (!countView) {
+    return sendSuccess(res, mapListing(listing));
   }
 
   const updated = await prisma.listing.update({
@@ -235,10 +181,13 @@ export async function updateListing(req: AuthRequest, res: Response) {
 
   const parsed = updateSchema.safeParse(req.body);
   if (!parsed.success) {
-    return sendError(res, 'Invalid listing data', 400, parsed.error.message);
+    return sendError(
+      res,
+      'Invalid listing data',
+      400,
+      JSON.stringify(parsed.error.flatten().fieldErrors)
+    );
   }
-
-  const data: Prisma.ListingUpdateInput = { ...parsed.data };
 
   if (parsed.data.status === 'active' && listing.status !== 'active') {
     const locked = await prisma.transaction.findFirst({
@@ -255,6 +204,21 @@ export async function updateListing(req: AuthRequest, res: Response) {
         409
       );
     }
+  }
+
+  const data: Prisma.ListingUpdateInput = {};
+  if (parsed.data.title) data.title = parsed.data.title;
+  if (parsed.data.description) data.description = parsed.data.description;
+  if (parsed.data.price) data.price = parsed.data.price;
+  if (parsed.data.condition) data.condition = parsed.data.condition;
+  if (parsed.data.location) data.location = parsed.data.location;
+  if (parsed.data.status) data.status = parsed.data.status;
+  if (parsed.data.category_id) {
+    const category = await prisma.category.findUnique({
+      where: { id: parsed.data.category_id },
+    });
+    if (!category) return sendError(res, 'Category not found', 400);
+    data.category = { connect: { id: parsed.data.category_id } };
   }
 
   const updated = await prisma.listing.update({

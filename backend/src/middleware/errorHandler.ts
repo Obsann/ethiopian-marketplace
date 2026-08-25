@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
 import { sendError } from '../utils/response';
 import { messages } from '../utils/messages';
 
@@ -19,6 +20,17 @@ export function errorHandler(
 ): Response {
   if (err instanceof AppError) {
     return sendError(res, err.message, err.statusCode);
+  }
+
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === 'P2002') {
+      return sendError(res, 'A record with this value already exists', 409);
+    }
+    if (err.code === 'P2025' || err.code === 'P2003') {
+      return sendError(res, 'Related record was not found', 400);
+    }
+    console.error(err);
+    return sendError(res, 'Database request failed', 400);
   }
 
   if (err && typeof err === 'object' && 'name' in err) {

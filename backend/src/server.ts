@@ -68,6 +68,14 @@ app.use(errorHandler);
 
 const PORT = Number(process.env.PORT) || 4000;
 
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err);
+});
+
 if (require.main === module) {
   server.listen(PORT, () => {
     console.log(`API listening on http://localhost:${PORT}`);
