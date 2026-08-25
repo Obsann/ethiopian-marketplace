@@ -62,6 +62,7 @@ export function Navbar() {
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:ml-3 sm:gap-1">
+          <div id="google_translate_header_target" className="flex max-w-[9.5rem] items-center sm:max-w-none" />
           {isLoading && <span className="h-8 w-16 animate-pulse rounded bg-black/5" aria-hidden />}
           {!isLoading && user && <NotificationsMenu />}
           {!isLoading && !user && (

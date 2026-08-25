@@ -71,8 +71,9 @@ body {
   }
 }
 
-/* Google Translate Element — keep SuqET chrome stable */
-.goog-te-banner-frame {
+/* Google Translate Element — MedSchedule-style widget */
+.goog-te-banner-frame,
+.skiptranslate iframe {
   display: none !important;
 }
 
@@ -80,24 +81,35 @@ body {
   top: 0 !important;
 }
 
-.google-translate-widget .goog-te-gadget {
+.goog-te-gadget {
   font-family: inherit !important;
-  font-size: 0.75rem !important;
   color: var(--ink) !important;
 }
 
-.google-translate-widget select.goog-te-combo {
-  max-width: 100%;
+.goog-te-gadget .goog-te-combo {
+  max-width: 9.5rem;
   margin: 0 !important;
-  border-radius: 0.5rem !important;
-  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  font-size: 13px !important;
+  line-height: 1.25 !important;
+  padding: 6px 10px !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 10px !important;
   background: #fff !important;
   color: var(--ink) !important;
-  font-size: 0.8125rem !important;
-  padding: 0.35rem 0.5rem !important;
+  cursor: pointer;
 }
 
-.google-translate-widget .goog-logo-link,
-.google-translate-widget .goog-te-gadget > span > a {
+.goog-te-gadget .goog-te-combo:hover {
+  border-color: #d1d5db !important;
+}
+
+.goog-te-gadget .goog-te-combo:focus {
+  outline: none !important;
+  border-color: #1a7a4c !important;
+  box-shadow: 0 0 0 3px rgba(26, 122, 76, 0.2) !important;
+}
+
+.goog-te-gadget > span,
+.goog-logo-link {
   display: none !important;
 }
