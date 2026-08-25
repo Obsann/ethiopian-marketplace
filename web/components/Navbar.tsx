@@ -52,7 +52,7 @@ export function Navbar() {
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 sm:py-3">
         <Link
           href="/"
-          className="shrink-0 font-display text-lg font-bold tracking-tight text-brand-700 sm:text-xl"
+          className="notranslate shrink-0 font-display text-lg font-bold tracking-tight text-brand-700 sm:text-xl"
         >
           Suq<span className="text-accent-500">ET</span>
         </Link>

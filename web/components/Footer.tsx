@@ -13,7 +13,7 @@ export function Footer() {
       <div className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
         <div className="grid gap-8 sm:grid-cols-3">
           <div>
-            <p className="font-display text-lg font-bold tracking-tight">
+            <p className="notranslate font-display text-lg font-bold tracking-tight">
               Suq<span className="text-accent-400">ET</span>
             </p>
             <p className="mt-2 max-w-xs text-sm leading-relaxed text-white/70">

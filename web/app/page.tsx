@@ -52,7 +52,7 @@ export default function HomePage() {
       <section className="relative overflow-hidden rounded-2xl bg-brand-900 px-5 py-12 text-white sm:px-10 sm:py-16">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(232,163,23,0.25),transparent_45%),radial-gradient(circle_at_90%_10%,rgba(255,255,255,0.08),transparent_40%)]" />
         <div className="relative z-10 mx-auto max-w-2xl space-y-5 text-center">
-          <p className="font-display text-3xl font-bold tracking-tight sm:text-5xl">
+          <p className="notranslate font-display text-3xl font-bold tracking-tight sm:text-5xl">
             SuqET
           </p>
           <h1 className="text-balance text-lg text-white/90 sm:text-xl">
