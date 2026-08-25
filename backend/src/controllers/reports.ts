@@ -58,8 +58,28 @@ export async function listReports(req: AuthRequest, res: Response) {
     }),
   ]);
 
+  const enriched = await Promise.all(
+    items.map(async (report) => {
+      let target: { id: string; title?: string; name?: string; email?: string } | null = null;
+      if (report.target_type === 'listing') {
+        const listing = await prisma.listing.findUnique({
+          where: { id: report.target_id },
+          select: { id: true, title: true },
+        });
+        target = listing;
+      } else {
+        const user = await prisma.user.findUnique({
+          where: { id: report.target_id },
+          select: { id: true, name: true, email: true },
+        });
+        target = user;
+      }
+      return { ...report, target };
+    })
+  );
+
   return sendSuccess(res, {
-    items,
+    items: enriched,
     pagination: { page, limit, total, pages: Math.ceil(total / limit) },
   });
 }

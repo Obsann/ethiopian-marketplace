@@ -35,6 +35,9 @@ export interface Listing {
   status: ListingStatus;
   images: string[];
   created_at: string;
+  seller?: { id: string; name: string; is_verified: boolean };
+  primary_image?: string | null;
+  view_count?: number;
 }
 
 export interface Message {

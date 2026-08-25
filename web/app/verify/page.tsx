@@ -14,6 +14,7 @@ export default function VerifyPage() {
   const [faceImage, setFaceImage] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) router.replace('/auth/login?next=/verify');
@@ -23,6 +24,7 @@ export default function VerifyPage() {
     e.preventDefault();
     if (!token || !idImage || !faceImage) return;
     setBusy(true);
+    setFailed(false);
     try {
       const body = new FormData();
       body.append('id_image', idImage);
@@ -30,6 +32,7 @@ export default function VerifyPage() {
       await api('/api/verifications/submit', { method: 'POST', token, body });
       setMsg('Submitted. An admin will review your documents soon.');
     } catch (err) {
+      setFailed(true);
       setMsg(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setBusy(false);
@@ -59,8 +62,10 @@ export default function VerifyPage() {
           <span className="font-medium">Face image</span>
           <input type="file" accept="image/*" required onChange={(e) => setFaceImage(e.target.files?.[0] || null)} />
         </label>
-        {msg && <p className="text-sm text-brand-700">{msg}</p>}
-        <Button type="submit" loading={busy} className="w-full">
+        {msg && (
+          <p className={`text-sm ${failed ? 'text-red-600' : 'text-brand-700'}`}>{msg}</p>
+        )}
+        <Button type="submit" loading={busy} disabled={!idImage || !faceImage} className="w-full">
           Submit for review
         </Button>
       </form>

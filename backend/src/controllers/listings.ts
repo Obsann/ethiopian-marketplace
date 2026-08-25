@@ -6,6 +6,7 @@ import { AuthRequest } from '../middleware/auth';
 import { sendError, sendSuccess } from '../utils/response';
 import { uploadImageBuffer } from '../utils/cloudinary';
 import { messages } from '../utils/messages';
+import { idsMatchingFullText, mapListing } from '../utils/listings';
 
 const createSchema = z.object({
   title: z.string().min(3),
@@ -16,41 +17,15 @@ const createSchema = z.object({
   location: z.string().min(2),
 });
 
-function mapListing(listing: {
-  id: string;
-  seller_id: string;
-  title: string;
-  description: string;
-  price: Prisma.Decimal;
-  condition: string;
-  category_id: string;
-  location: string;
-  status: string;
-  created_at: Date;
-  images?: { url: string; is_primary: boolean }[];
-  seller?: { id: string; name: string; is_verified: boolean };
-  view_count?: number;
-}) {
-  const images = (listing.images ?? [])
-    .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))
-    .map((i) => i.url);
-  return {
-    id: listing.id,
-    seller_id: listing.seller_id,
-    title: listing.title,
-    description: listing.description,
-    price: Number(listing.price),
-    condition: listing.condition,
-    category_id: listing.category_id,
-    location: listing.location,
-    status: listing.status,
-    images,
-    created_at: listing.created_at.toISOString(),
-    seller: listing.seller,
-    view_count: listing.view_count ?? 0,
-    primary_image: images[0] ?? null,
-  };
-}
+const updateSchema = z.object({
+  title: z.string().min(3).optional(),
+  description: z.string().min(10).optional(),
+  price: z.coerce.number().positive().optional(),
+  condition: z.enum(['new', 'like_new', 'good', 'fair']).optional(),
+  category_id: z.string().uuid().optional(),
+  location: z.string().min(2).optional(),
+  status: z.enum(['active', 'sold', 'removed']).optional(),
+});
 
 export async function createListing(req: AuthRequest, res: Response) {
   if (!req.user) return sendError(res, messages.unauthorized, 401);
@@ -60,7 +35,12 @@ export async function createListing(req: AuthRequest, res: Response) {
 
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
-    return sendError(res, 'Invalid listing data', 400, parsed.error.message);
+    return sendError(
+      res,
+      'Invalid listing data',
+      400,
+      JSON.stringify(parsed.error.flatten().fieldErrors)
+    );
   }
 
   const files = (req.files as Express.Multer.File[] | undefined) ?? [];
@@ -117,10 +97,17 @@ export async function getListings(req: AuthRequest, res: Response) {
 
   const query = req.query.query ? String(req.query.query).trim() : '';
   if (query) {
-    where.OR = [
-      { title: { contains: query, mode: 'insensitive' } },
-      { description: { contains: query, mode: 'insensitive' } },
-    ];
+    const ids = await idsMatchingFullText(query);
+    if (ids === 'skip') {
+      /* no-op */
+    } else if (ids.length === 0) {
+      return sendSuccess(res, {
+        items: [],
+        pagination: { page, limit, total: 0, pages: 0 },
+      });
+    } else {
+      where.id = { in: ids };
+    }
   }
 
   const sort = String(req.query.sort || 'newest');
@@ -162,6 +149,11 @@ export async function getListingById(req: AuthRequest, res: Response) {
     return sendError(res, messages.listingRemoved, 404);
   }
 
+  const countView = req.query.count_view !== '0' && req.query.count_view !== 'false';
+  if (!countView) {
+    return sendSuccess(res, mapListing(listing));
+  }
+
   const updated = await prisma.listing.update({
     where: { id },
     data: { view_count: { increment: 1 } },
@@ -183,13 +175,30 @@ export async function updateListing(req: AuthRequest, res: Response) {
     return sendError(res, messages.forbidden, 403);
   }
 
+  const parsed = updateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return sendError(
+      res,
+      'Invalid listing data',
+      400,
+      JSON.stringify(parsed.error.flatten().fieldErrors)
+    );
+  }
+
   const data: Prisma.ListingUpdateInput = {};
-  if (req.body.title) data.title = req.body.title;
-  if (req.body.description) data.description = req.body.description;
-  if (req.body.price) data.price = Number(req.body.price);
-  if (req.body.condition) data.condition = req.body.condition;
-  if (req.body.location) data.location = req.body.location;
-  if (req.body.status) data.status = req.body.status;
+  if (parsed.data.title) data.title = parsed.data.title;
+  if (parsed.data.description) data.description = parsed.data.description;
+  if (parsed.data.price) data.price = parsed.data.price;
+  if (parsed.data.condition) data.condition = parsed.data.condition;
+  if (parsed.data.location) data.location = parsed.data.location;
+  if (parsed.data.status) data.status = parsed.data.status;
+  if (parsed.data.category_id) {
+    const category = await prisma.category.findUnique({
+      where: { id: parsed.data.category_id },
+    });
+    if (!category) return sendError(res, 'Category not found', 400);
+    data.category = { connect: { id: parsed.data.category_id } };
+  }
 
   const updated = await prisma.listing.update({
     where: { id: listing.id },
