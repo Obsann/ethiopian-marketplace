@@ -4,10 +4,13 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { Package, MessageSquare, HandCoins } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
 
 interface DashboardData {
@@ -101,144 +104,200 @@ export default function DashboardPage() {
 
   if (isLoading || !canManage || loading) {
     return (
-      <div className="flex justify-center py-16">
+      <div className="page-shell flex justify-center pt-24 sm:pt-28 pb-16">
         <Spinner />
       </div>
     );
   }
 
-  if (!data) return error ? <p className="text-red-600">{error}</p> : null;
+  if (!data) {
+    return error ? (
+      <div className="page-shell pt-24 sm:pt-28 pb-16">
+        <Alert tone="error">{error}</Alert>
+      </div>
+    ) : null;
+  }
+
+  const kpis: [string, number][] = [
+    ['Active', data.stats.active_listings],
+    ['Sold', data.stats.total_sold],
+    ['Unread', data.stats.unread_messages],
+    ['Pending verify', data.stats.pending_verifications],
+  ];
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl font-semibold">Seller dashboard</h1>
-          <p className="text-sm text-ink/70">Manage listings and messages</p>
-        </div>
-        <Link href="/sell">
-          <Button>New listing</Button>
-        </Link>
-      </div>
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
-
-      {!data.is_verified && (
-        <div className="rounded-lg border border-accent-400/40 bg-accent-400/10 px-4 py-3 text-sm">
-          Get verified to build buyer trust.{' '}
-          <Link href="/verify" className="font-semibold underline">
-            Start verification
+    <div>
+      <section className="border-b border-border bg-ink text-white">
+        <div className="page-shell flex flex-wrap items-end justify-between gap-4 pt-24 sm:pt-28 pb-10 sm:pb-12">
+          <div>
+            <p className="eyebrow text-white/45">Seller</p>
+            <h1 className="mt-3 font-display text-display font-medium">Dashboard</h1>
+            <p className="mt-3 max-w-lg text-sm text-white/60">Manage listings and messages</p>
+          </div>
+          <Link href="/sell">
+            <Button variant="inverse">New listing</Button>
           </Link>
         </div>
-      )}
+      </section>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          ['Active', data.stats.active_listings],
-          ['Sold', data.stats.total_sold],
-          ['Unread', data.stats.unread_messages],
-          ['Pending verify', data.stats.pending_verifications],
-        ].map(([label, value]) => (
-          <div key={String(label)} className="rounded-lg border border-black/8 bg-white/90 p-4">
-            <p className="text-xs text-ink/60">{label}</p>
-            <p className="mt-1 text-2xl font-bold">{value}</p>
-          </div>
-        ))}
-      </div>
+      <div className="page-shell space-y-10 py-10 pb-16">
+        {error && <Alert tone="error">{error}</Alert>}
 
-      <section className="space-y-3">
-        <h2 className="font-display text-xl font-semibold">My listings</h2>
-        <div className="overflow-x-auto rounded-lg border border-black/8 bg-white/90">
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-black/8 text-ink/60">
-              <tr>
-                <th className="px-3 py-2 font-medium">Item</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium">Price</th>
-                <th className="px-3 py-2 font-medium">Views</th>
-                <th className="px-3 py-2 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.listings.map((l) => (
-                <tr key={l.id} className="border-b border-black/5">
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <div className="relative h-10 w-10 overflow-hidden rounded bg-stone-100">
-                        {l.image && (
-                          <Image src={l.image} alt="" fill className="object-cover" sizes="40px" />
-                        )}
-                      </div>
-                      <Link href={`/listings/${l.id}`} className="font-medium hover:underline">
-                        {l.title}
-                      </Link>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2">
-                    <Badge tone={l.status === 'active' ? 'green' : 'gray'}>{l.status}</Badge>
-                  </td>
-                  <td className="px-3 py-2">{l.price.toLocaleString()} ETB</td>
-                  <td className="px-3 py-2">{l.view_count}</td>
-                  <td className="px-3 py-2">
-                    <button
-                      type="button"
-                      className="text-red-600 hover:underline"
-                      onClick={() => removeListing(l.id)}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {!data.is_verified && (
+          <Alert tone="info">
+            Get verified to build buyer trust.{' '}
+            <Link href="/verify" className="font-semibold underline underline-offset-2">
+              Start verification
+            </Link>
+          </Alert>
+        )}
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+          {kpis.map(([label, value]) => (
+            <div key={label} className="border border-border bg-surface p-5">
+              <p className="eyebrow">{label}</p>
+              <p className="mt-3 font-display text-3xl font-medium text-ink">{value}</p>
+            </div>
+          ))}
         </div>
-      </section>
 
-      <section className="space-y-3">
-        <h2 className="font-display text-xl font-semibold">Held payments</h2>
-        <ul className="space-y-2">
-          {(data.held_sales ?? []).map((s) => (
-            <li
-              key={s.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-black/8 bg-white/90 px-4 py-3 text-sm"
-            >
-              <div>
-                <Link href={`/listings/${s.listing.id}`} className="font-medium hover:underline">
-                  {s.listing.title}
-                </Link>
-                <p className="text-ink/70">{s.amount.toLocaleString()} ETB held</p>
-              </div>
-              <Button loading={busyId === s.id} onClick={() => releaseSale(s.id)}>
-                Confirm delivery
-              </Button>
-            </li>
-          ))}
-          {(data.held_sales ?? []).length === 0 && (
-            <p className="text-sm text-ink/60">No held payments.</p>
+        <section className="space-y-4">
+          <h2 className="font-display text-2xl font-medium text-ink">My listings</h2>
+          {data.listings.length === 0 ? (
+            <EmptyState
+              icon={Package}
+              title="No listings yet"
+              description="Create your first listing to start selling on the marketplace."
+              actionHref="/sell"
+              actionLabel="New listing"
+            />
+          ) : (
+            <div className="overflow-x-auto border border-border bg-surface">
+              <table className="min-w-full text-left text-sm">
+                <thead className="border-b border-border">
+                  <tr>
+                    <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+                      Item
+                    </th>
+                    <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+                      Price
+                    </th>
+                    <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+                      Views
+                    </th>
+                    <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.listings.map((l) => (
+                    <tr
+                      key={l.id}
+                      className="border-b border-border last:border-0 transition hover:bg-paper"
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="relative h-10 w-10 overflow-hidden border border-border bg-paper">
+                            {l.image && (
+                              <Image src={l.image} alt="" fill className="object-cover" sizes="40px" />
+                            )}
+                          </div>
+                          <Link
+                            href={`/listings/${l.id}`}
+                            className="font-medium text-ink transition hover:underline"
+                          >
+                            {l.title}
+                          </Link>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge tone={l.status === 'active' ? 'green' : 'gray'}>{l.status}</Badge>
+                      </td>
+                      <td className="px-4 py-3 font-medium text-accent-600">
+                        {l.price.toLocaleString()} ETB
+                      </td>
+                      <td className="px-4 py-3 text-muted">{l.view_count}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          className="text-danger-600 transition hover:underline"
+                          onClick={() => removeListing(l.id)}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-        </ul>
-      </section>
+        </section>
 
-      <section className="space-y-3">
-        <h2 className="font-display text-xl font-semibold">Recent messages</h2>
-        <ul className="space-y-2">
-          {data.recent_messages.map((m) => (
-            <li key={m.id} className="rounded-lg border border-black/8 bg-white/90 px-4 py-3 text-sm">
-              <Link
-                href={`/listings/${m.listing.id}?with=${m.sender.id}`}
-                className="font-medium hover:underline"
-              >
-                {m.sender.name} · {m.listing.title}
-              </Link>
-              <p className="text-ink/70">{m.content}</p>
-            </li>
-          ))}
-          {data.recent_messages.length === 0 && (
-            <p className="text-sm text-ink/60">No messages yet.</p>
+        <section className="space-y-4">
+          <h2 className="font-display text-2xl font-medium text-ink">Held payments</h2>
+          {(data.held_sales ?? []).length === 0 ? (
+            <EmptyState
+              icon={HandCoins}
+              title="No held payments"
+              description="Escrowed sales will appear here until you confirm delivery."
+            />
+          ) : (
+            <ul className="space-y-2">
+              {(data.held_sales ?? []).map((s) => (
+                <li
+                  key={s.id}
+                  className="flex flex-wrap items-center justify-between gap-3 border border-border bg-surface px-5 py-4 text-sm"
+                >
+                  <div>
+                    <Link
+                      href={`/listings/${s.listing.id}`}
+                      className="font-medium text-ink transition hover:underline"
+                    >
+                      {s.listing.title}
+                    </Link>
+                    <p className="mt-1 font-medium text-accent-600">
+                      {s.amount.toLocaleString()} ETB held
+                    </p>
+                  </div>
+                  <Button loading={busyId === s.id} onClick={() => releaseSale(s.id)}>
+                    Confirm delivery
+                  </Button>
+                </li>
+              ))}
+            </ul>
           )}
-        </ul>
-      </section>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="font-display text-2xl font-medium text-ink">Recent messages</h2>
+          {data.recent_messages.length === 0 ? (
+            <EmptyState
+              icon={MessageSquare}
+              title="No messages yet"
+              description="Buyer inquiries about your listings will show up here."
+            />
+          ) : (
+            <ul className="space-y-2">
+              {data.recent_messages.map((m) => (
+                <li key={m.id} className="border border-border bg-surface px-5 py-4 text-sm transition hover:bg-paper">
+                  <Link
+                    href={`/listings/${m.listing.id}?with=${m.sender.id}`}
+                    className="font-medium text-ink transition hover:underline"
+                  >
+                    {m.sender.name} · {m.listing.title}
+                  </Link>
+                  <p className="mt-1 text-muted">{m.content}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

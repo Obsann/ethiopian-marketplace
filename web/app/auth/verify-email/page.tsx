@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
 import type { User } from '@/types';
 
@@ -33,34 +34,47 @@ function VerifyEmailInner() {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-md space-y-4 text-center">
-        <h1 className="font-display text-2xl font-semibold">Email confirmation</h1>
-        <p className="text-sm text-red-600">{error}</p>
-        <Link href="/auth/login" className="font-medium text-brand-600 hover:underline">
-          Back to log in
-        </Link>
+      <div className="mx-auto max-w-md space-y-8">
+        <div>
+          <p className="eyebrow">Account</p>
+          <h1 className="mt-3 font-display text-4xl font-medium text-ink">Email confirmation</h1>
+          <p className="mt-2 text-sm text-muted">We could not confirm this link.</p>
+        </div>
+        <div className="space-y-5 border border-border bg-surface p-6 sm:p-8">
+          <Alert tone="error">{error}</Alert>
+          <Link
+            href="/auth/login"
+            className="inline-block cursor-pointer text-xs font-semibold uppercase tracking-[0.16em] text-muted transition hover:text-ink"
+          >
+            Back to log in
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center gap-3 py-16">
-      <Spinner />
-      <p className="text-sm text-ink/70">Confirming your email…</p>
+    <div className="mx-auto max-w-md">
+      <div className="flex flex-col items-center gap-3 border border-border bg-surface p-6 py-16 sm:p-8">
+        <Spinner />
+        <p className="text-sm text-muted">Confirming your email…</p>
+      </div>
     </div>
   );
 }
 
 export default function VerifyEmailPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex justify-center py-16">
-          <Spinner />
-        </div>
-      }
-    >
-      <VerifyEmailInner />
-    </Suspense>
+    <div className="page-shell pt-24 sm:pt-28 pb-16">
+      <Suspense
+        fallback={
+          <div className="flex justify-center py-16">
+            <Spinner />
+          </div>
+        }
+      >
+        <VerifyEmailInner />
+      </Suspense>
+    </div>
   );
 }

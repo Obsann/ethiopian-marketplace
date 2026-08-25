@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { Bell } from 'lucide-react';
 import { api } from '@/lib/api';
 import { connectSocket, disconnectSocket } from '@/lib/socket';
 import { useAuth } from '@/lib/auth';
@@ -36,7 +37,7 @@ function timeAgo(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
-export function NotificationsMenu() {
+export function NotificationsMenu({ inverted = false }: { inverted?: boolean }) {
   const { token, user } = useAuth();
   const root = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -104,21 +105,19 @@ export function NotificationsMenu() {
     <div className="relative" ref={root}>
       <button
         type="button"
-        className="relative rounded-md p-2 text-ink/80 hover:bg-black/5 hover:text-ink"
+        className={`relative cursor-pointer p-2 transition duration-300 ${
+          inverted
+            ? 'text-white/80 hover:bg-white/10 hover:text-white'
+            : 'text-muted hover:bg-stone-100 hover:text-ink'
+        }`}
         onClick={() => setOpen((v) => !v)}
         aria-label={label}
         aria-expanded={open}
         aria-haspopup="dialog"
       >
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9"
-          />
-        </svg>
+        <Bell className="h-5 w-5" aria-hidden strokeWidth={1.8} />
         {unread > 0 && (
-          <span className="absolute right-0.5 top-0.5 min-w-[1.05rem] rounded-full bg-brand-600 px-1 text-center text-[10px] font-semibold leading-4 text-white">
+          <span className="absolute right-0.5 top-0.5 min-w-[1.05rem] bg-accent-600 px-1 text-center text-[10px] font-semibold leading-4 text-white">
             {unread > 9 ? '9+' : unread}
           </span>
         )}
@@ -127,13 +126,13 @@ export function NotificationsMenu() {
         <div
           role="dialog"
           aria-label="Notifications"
-          className="absolute right-0 z-50 mt-2 w-[min(calc(100vw-2rem),20rem)] overflow-hidden rounded-lg border border-black/10 bg-white shadow-lg"
+          className="absolute right-0 z-50 mt-2 w-[min(calc(100vw-2rem),20rem)] overflow-hidden border border-border bg-surface shadow-float"
         >
-          <div className="flex items-center justify-between border-b border-black/8 px-3 py-2">
-            <span className="text-sm font-medium">Notifications</span>
+          <div className="flex items-center justify-between border-b border-border px-3 py-2">
+            <span className="text-sm font-semibold text-ink">Notifications</span>
             <button
               type="button"
-              className="rounded px-1.5 py-0.5 text-xs text-ink/50 hover:bg-black/5 hover:text-ink"
+              className="cursor-pointer rounded-md px-1.5 py-0.5 text-xs text-muted transition hover:bg-slate-100 hover:text-ink"
               onClick={() => setOpen(false)}
             >
               Close
@@ -141,22 +140,24 @@ export function NotificationsMenu() {
           </div>
           <ul className="max-h-[min(70vh,22rem)] overflow-y-auto">
             {items.slice(0, 12).map((n) => (
-              <li key={n.id} className="border-b border-black/5 last:border-0">
+              <li key={n.id} className="border-b border-border last:border-0">
                 <Link
                   href={hrefForType(n.type)}
-                  className={`block px-3 py-2.5 text-left ${n.is_read ? 'text-ink/60' : 'bg-brand-50 text-ink'}`}
+                  className={`block cursor-pointer px-3 py-2.5 text-left transition ${
+                    n.is_read ? 'text-muted' : 'bg-brand-50 text-ink'
+                  }`}
                   onClick={() => {
                     void markRead(n.id);
                     setOpen(false);
                   }}
                 >
                   <p className="text-sm leading-snug">{n.message}</p>
-                  <p className="mt-1 text-[11px] text-ink/45">{timeAgo(n.created_at)}</p>
+                  <p className="mt-1 text-[11px] text-muted">{timeAgo(n.created_at)}</p>
                 </Link>
               </li>
             ))}
             {items.length === 0 && (
-              <li className="px-3 py-8 text-center text-sm text-ink/50">No notifications yet.</li>
+              <li className="px-3 py-8 text-center text-sm text-muted">No notifications yet.</li>
             )}
           </ul>
         </div>

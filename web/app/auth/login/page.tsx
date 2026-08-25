@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
 import { GoogleSignInButton } from '@/components/GoogleSignInButton';
 
@@ -42,42 +43,52 @@ function LoginForm() {
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
+    <div className="mx-auto max-w-md space-y-8">
       <div>
-        <h1 className="font-display text-3xl font-semibold">Log in</h1>
-        <p className="mt-1 text-sm text-ink/70">Welcome back to SuqET.</p>
+        <p className="eyebrow">Account</p>
+        <h1 className="mt-3 font-display text-4xl font-medium text-ink">Log in</h1>
+        <p className="mt-2 text-sm text-muted">Welcome back to SuqET.</p>
       </div>
-      <div className="space-y-4 rounded-xl border border-black/8 bg-white/90 p-5">
+      <div className="space-y-5 border border-border bg-surface p-6 sm:p-8">
         <GoogleSignInButton next={params.get('next') || undefined} />
         <form onSubmit={onSubmit} className="space-y-4">
           <Input
+            id="login-email"
             label="Email"
             type="email"
+            name="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             error={errors.email}
             required
+            autoComplete="email"
           />
           <div>
             <Input
+              id="login-password"
               label="Password"
               type="password"
+              name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               error={errors.password}
               required
+              autoComplete="current-password"
             />
             <p className="mt-1.5 text-right text-sm">
-              <Link href="/auth/forgot-password" className="font-medium text-brand-600 hover:underline">
+              <Link
+                href="/auth/forgot-password"
+                className="cursor-pointer text-accent-600 transition hover:text-accent-700"
+              >
                 Forgot password?
               </Link>
             </p>
           </div>
-          {formError && <p className="text-sm text-red-600">{formError}</p>}
+          {formError && <Alert tone="error">{formError}</Alert>}
           {formError.includes('Confirm your email') && (
             <button
               type="button"
-              className="text-sm font-medium text-brand-600 hover:underline"
+              className="cursor-pointer text-sm font-medium text-accent-600 transition hover:text-accent-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
               onClick={async () => {
                 try {
                   await api('/api/auth/resend-verification', {
@@ -93,14 +104,17 @@ function LoginForm() {
               Resend confirmation email
             </button>
           )}
-          <Button type="submit" className="w-full" loading={loading}>
+          <Button type="submit" variant="primary" className="w-full" loading={loading}>
             Log in
           </Button>
         </form>
       </div>
-      <p className="text-center text-sm">
+      <p className="text-center text-sm text-muted">
         New here?{' '}
-        <Link href="/auth/register" className="font-medium text-brand-600 hover:underline">
+        <Link
+          href="/auth/register"
+          className="cursor-pointer font-medium text-accent-600 transition hover:text-accent-700"
+        >
           Create an account
         </Link>
       </p>
@@ -110,14 +124,16 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex justify-center py-16">
-          <Spinner />
-        </div>
-      }
-    >
-      <LoginForm />
-    </Suspense>
+    <div className="page-shell pt-24 sm:pt-28 pb-16">
+      <Suspense
+        fallback={
+          <div className="flex justify-center py-16">
+            <Spinner />
+          </div>
+        }
+      >
+        <LoginForm />
+      </Suspense>
+    </div>
   );
 }

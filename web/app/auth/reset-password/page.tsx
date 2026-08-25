@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
 
 function ResetForm() {
@@ -47,33 +48,49 @@ function ResetForm() {
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
+    <div className="mx-auto max-w-md space-y-8">
       <div>
-        <h1 className="font-display text-3xl font-semibold">Set a new password</h1>
-        <p className="mt-1 text-sm text-ink/70">Choose a password for your SuqET account.</p>
+        <p className="eyebrow">Account</p>
+        <h1 className="mt-3 font-display text-4xl font-medium text-ink">Set a new password</h1>
+        <p className="mt-2 text-sm text-muted">Choose a password for your SuqET account.</p>
       </div>
-      <form onSubmit={onSubmit} className="space-y-4 rounded-xl border border-black/8 bg-white/90 p-5">
+      <form onSubmit={onSubmit} className="space-y-4 border border-border bg-surface p-6 sm:p-8">
         <Input
+          id="reset-password"
           label="New password"
           type="password"
+          name="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          autoComplete="new-password"
         />
         <Input
+          id="reset-confirm"
           label="Confirm password"
           type="password"
+          name="confirm"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           required
+          autoComplete="new-password"
         />
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <Button type="submit" className="w-full" loading={loading} disabled={!token}>
+        {error && <Alert tone="error">{error}</Alert>}
+        <Button
+          type="submit"
+          variant="primary"
+          className="w-full"
+          loading={loading}
+          disabled={!token}
+        >
           Update password
         </Button>
       </form>
-      <p className="text-center text-sm">
-        <Link href="/auth/forgot-password" className="font-medium text-brand-600 hover:underline">
+      <p className="text-center text-sm text-muted">
+        <Link
+          href="/auth/forgot-password"
+          className="cursor-pointer font-medium text-accent-600 transition hover:text-accent-700"
+        >
           Request a new link
         </Link>
       </p>
@@ -83,14 +100,16 @@ function ResetForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex justify-center py-16">
-          <Spinner />
-        </div>
-      }
-    >
-      <ResetForm />
-    </Suspense>
+    <div className="page-shell pt-24 sm:pt-28 pb-16">
+      <Suspense
+        fallback={
+          <div className="flex justify-center py-16">
+            <Spinner />
+          </div>
+        }
+      >
+        <ResetForm />
+      </Suspense>
+    </div>
   );
 }

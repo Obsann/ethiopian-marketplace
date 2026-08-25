@@ -1,15 +1,44 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { SlidersHorizontal, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Category, Listing, Pagination } from '@/types';
 import { ListingCard } from '@/components/ListingCard';
-import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Suspense } from 'react';
+import { Alert } from '@/components/ui/Alert';
+import { ListingCardSkeleton } from '@/components/ui/Skeleton';
+import { Reveal } from '@/components/Reveal';
+
+const selectClass = 'field cursor-pointer';
+
+function FilterSelect({
+  id,
+  label,
+  value,
+  onChange,
+  children,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="block text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+        {label}
+      </label>
+      <select id={id} className={selectClass} value={value} onChange={(e) => onChange(e.target.value)}>
+        {children}
+      </select>
+    </div>
+  );
+}
 
 function ListingsContent() {
   const searchParams = useSearchParams();
@@ -59,157 +88,171 @@ function ListingsContent() {
   }
 
   useEffect(() => {
-    api<Category[]>('/api/listings/categories').then((r) => setCategories(r.data)).catch(() => {});
-  }, []);
-
-  useEffect(() => {
     setLoading(true);
-    setError('');
     const qs = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => {
       if (v) qs.set(k, v);
     });
-    qs.set('limit', '20');
-    api<{ items: Listing[]; pagination: Pagination }>(`/api/listings?${qs}`)
-      .then((r) => {
-        setListings(r.data.items);
-        setPagination(r.data.pagination);
+    qs.set('limit', '12');
+    Promise.all([
+      api<{ items: Listing[]; pagination: Pagination }>(`/api/listings?${qs}`),
+      api<Category[]>('/api/listings/categories'),
+    ])
+      .then(([listRes, catRes]) => {
+        setListings(listRes.data.items);
+        setPagination(listRes.data.pagination);
+        setCategories(catRes.data);
+        setError('');
       })
-      .catch((e) => setError(e.message))
+      .catch((e) => setError(e.message || 'Failed to load'))
       .finally(() => setLoading(false));
   }, [filters]);
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-3xl font-semibold">Browse listings</h1>
-        <p className="mt-1 text-sm text-ink/70">Filter by category, price, condition, and location.</p>
-      </div>
-
+  const filterPanel = (
+    <aside className="space-y-5 border border-border bg-surface p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink">Filters</p>
       <Input
+        id="shop-query"
         label="Search"
         value={queryInput}
         onChange={(e) => setQueryInput(e.target.value)}
-        placeholder="e.g. phone, sofa, helmet"
+        placeholder="Keyword…"
       />
-
-      <Button
-        type="button"
-        variant="ghost"
-        className="lg:hidden"
-        onClick={() => setFiltersOpen((v) => !v)}
+      <FilterSelect
+        id="shop-category"
+        label="Category"
+        value={filters.category_id}
+        onChange={(v) => setParam('category_id', v)}
       >
-        {filtersOpen ? 'Hide filters' : 'Show filters'}
-      </Button>
+        <option value="">All</option>
+        {categories.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </FilterSelect>
+      <FilterSelect
+        id="shop-condition"
+        label="Condition"
+        value={filters.condition}
+        onChange={(v) => setParam('condition', v)}
+      >
+        <option value="">Any</option>
+        <option value="new">New</option>
+        <option value="like_new">Like new</option>
+        <option value="good">Good</option>
+        <option value="fair">Fair</option>
+      </FilterSelect>
+      <div className="grid grid-cols-2 gap-3">
+        <Input
+          id="min-price"
+          label="Min ETB"
+          type="number"
+          value={filters.min_price}
+          onChange={(e) => setParam('min_price', e.target.value)}
+        />
+        <Input
+          id="max-price"
+          label="Max ETB"
+          type="number"
+          value={filters.max_price}
+          onChange={(e) => setParam('max_price', e.target.value)}
+        />
+      </div>
+      <Input
+        id="location"
+        label="Location"
+        value={filters.location}
+        onChange={(e) => setParam('location', e.target.value)}
+      />
+      <FilterSelect id="shop-sort" label="Sort" value={filters.sort} onChange={(v) => setParam('sort', v)}>
+        <option value="newest">Newest</option>
+        <option value="price_asc">Price ↑</option>
+        <option value="price_desc">Price ↓</option>
+      </FilterSelect>
+    </aside>
+  );
 
-      <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-        <aside className={`space-y-4 rounded-lg border border-black/8 bg-white/80 p-4 ${filtersOpen ? 'block' : 'hidden lg:block'}`}>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Category</label>
-            <select
-              className="w-full rounded-md border border-black/10 bg-white px-3 py-2 text-sm"
-              value={filters.category_id}
-              onChange={(e) => setParam('category_id', e.target.value)}
-            >
-              <option value="">All</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Condition</label>
-            <select
-              className="w-full rounded-md border border-black/10 bg-white px-3 py-2 text-sm"
-              value={filters.condition}
-              onChange={(e) => setParam('condition', e.target.value)}
-            >
-              <option value="">Any</option>
-              <option value="new">New</option>
-              <option value="like_new">Like new</option>
-              <option value="good">Good</option>
-              <option value="fair">Fair</option>
-            </select>
-          </div>
-          <Input
-            label="Min price (ETB)"
-            type="number"
-            value={filters.min_price}
-            onChange={(e) => setParam('min_price', e.target.value)}
-          />
-          <Input
-            label="Max price (ETB)"
-            type="number"
-            value={filters.max_price}
-            onChange={(e) => setParam('max_price', e.target.value)}
-          />
-          <Input
-            label="Location"
-            value={filters.location}
-            onChange={(e) => setParam('location', e.target.value)}
-            placeholder="Addis Ababa, Jimma…"
-          />
-          <div>
-            <label className="mb-1 block text-sm font-medium">Sort</label>
-            <select
-              className="w-full rounded-md border border-black/10 bg-white px-3 py-2 text-sm"
-              value={filters.sort}
-              onChange={(e) => setParam('sort', e.target.value)}
-            >
-              <option value="newest">Newest</option>
-              <option value="price_asc">Price: low to high</option>
-              <option value="price_desc">Price: high to low</option>
-            </select>
-          </div>
-        </aside>
+  return (
+    <div className="bg-paper">
+      <section className="border-b border-border bg-ink text-white">
+        <div className="page-shell py-20 sm:py-28">
+          <p className="eyebrow text-white/45">Shop</p>
+          <h1 className="mt-3 font-display text-hero font-medium">The collection</h1>
+          <p className="mt-4 max-w-lg text-sm text-white/60 sm:text-base">
+            Browse live listings across Ethiopia — filter by category, condition, and place.
+          </p>
+        </div>
+      </section>
 
-        <div>
-          {loading && (
-            <div className="flex justify-center py-16">
-              <Spinner />
-            </div>
-          )}
-          {error && <p className="text-red-600">{error}</p>}
-          {!loading && !error && listings.length === 0 && (
-            <EmptyState
-              title="No listings found"
-              description="Try different filters."
-              actionHref="/"
-              actionLabel="Back home"
-            />
-          )}
-          {!loading && listings.length > 0 && (
-            <>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {listings.map((l) => (
-                  <ListingCard key={l.id} listing={l} />
+      <div className="page-shell py-10 sm:py-14">
+        <div className="mb-6 flex items-center justify-between gap-3 lg:hidden">
+          <p className="text-sm text-muted">
+            {pagination ? `${pagination.total} pieces` : 'Loading…'}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="px-3 py-2"
+            onClick={() => setFiltersOpen((v) => !v)}
+          >
+            {filtersOpen ? <X className="h-4 w-4" /> : <SlidersHorizontal className="h-4 w-4" />}
+            Filters
+          </Button>
+        </div>
+
+        <div className="grid gap-8 lg:grid-cols-12">
+          <div className={`lg:col-span-3 ${filtersOpen ? 'block' : 'hidden lg:block'}`}>
+            {filterPanel}
+          </div>
+          <div className="lg:col-span-9">
+            {error && <Alert tone="error">{error}</Alert>}
+            {loading && (
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <ListingCardSkeleton key={i} />
                 ))}
               </div>
-              {pagination && pagination.pages > 1 && (
-                <div className="mt-6 flex items-center justify-center gap-3">
-                  <Button
-                    variant="ghost"
-                    disabled={pagination.page <= 1}
-                    onClick={() => setParam('page', String(pagination.page - 1))}
-                  >
-                    Previous
-                  </Button>
-                  <span className="text-sm">
-                    Page {pagination.page} of {pagination.pages}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    disabled={pagination.page >= pagination.pages}
-                    onClick={() => setParam('page', String(pagination.page + 1))}
-                  >
-                    Next
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
+            )}
+            {!loading && !error && listings.length === 0 && (
+              <EmptyState
+                title="No pieces found"
+                description="Try clearing filters or search with a broader keyword."
+                actionHref="/listings"
+                actionLabel="Reset shop"
+              />
+            )}
+            {!loading && listings.length > 0 && (
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
+                {listings.map((l, i) => (
+                  <Reveal key={l.id} delayMs={(i % 6) * 40}>
+                    <ListingCard listing={l} />
+                  </Reveal>
+                ))}
+              </div>
+            )}
+            {pagination && pagination.pages > 1 && (
+              <div className="mt-10 flex items-center justify-center gap-3">
+                <Button
+                  variant="outline"
+                  disabled={Number(filters.page) <= 1}
+                  onClick={() => setParam('page', String(Number(filters.page) - 1))}
+                >
+                  Previous
+                </Button>
+                <span className="text-xs uppercase tracking-[0.14em] text-muted">
+                  {filters.page} / {pagination.pages}
+                </span>
+                <Button
+                  variant="outline"
+                  disabled={Number(filters.page) >= pagination.pages}
+                  onClick={() => setParam('page', String(Number(filters.page) + 1))}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -220,8 +263,10 @@ export default function ListingsPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex justify-center py-16">
-          <Spinner />
+        <div className="page-shell grid grid-cols-2 gap-4 py-24 md:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <ListingCardSkeleton key={i} />
+          ))}
         </div>
       }
     >

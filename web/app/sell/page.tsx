@@ -2,12 +2,18 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft, ArrowRight, ImagePlus, Upload } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Category } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
 import { Spinner } from '@/components/ui/Spinner';
+import { Alert } from '@/components/ui/Alert';
+import { Badge } from '@/components/ui/Badge';
+
+const STEP_LABELS = ['Details', 'Photos', 'Preview'];
 
 export default function SellPage() {
   const { user, token, isLoading } = useAuth();
@@ -67,44 +73,62 @@ export default function SellPage() {
 
   if (isLoading || !user) {
     return (
-      <div className="flex justify-center py-16">
+      <div className="page-shell flex justify-center pt-24 sm:pt-28 pb-16" aria-busy="true" aria-label="Loading">
         <Spinner />
       </div>
     );
   }
 
+  const categoryName = categories.find((c) => c.id === form.category_id)?.name;
+
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="page-shell mx-auto max-w-xl space-y-8 pt-24 sm:pt-28 pb-16">
       <div>
-        <h1 className="font-display text-3xl font-semibold">Sell an item</h1>
-        <p className="mt-1 text-sm text-ink/70">Step {step} of 3</p>
-        <div className="mt-3 flex gap-2">
+        <p className="eyebrow">List</p>
+        <h1 className="mt-3 font-display text-display font-medium text-ink">Sell an item</h1>
+        <p className="mt-3 text-sm text-muted">
+          Step {step} of 3 — {STEP_LABELS[step - 1]}
+        </p>
+        <div className="mt-5 flex gap-2" role="list" aria-label="Progress">
           {[1, 2, 3].map((s) => (
             <div
               key={s}
-              className={`h-1.5 flex-1 rounded-full ${s <= step ? 'bg-brand-600' : 'bg-black/10'}`}
+              role="listitem"
+              aria-current={s === step ? 'step' : undefined}
+              className={`h-1 flex-1 transition ${s <= step ? 'bg-ink' : 'bg-border'}`}
             />
           ))}
         </div>
       </div>
 
       {step === 1 && (
-        <div className="space-y-4 rounded-2xl border border-black/8 bg-white p-5 shadow-card">
-          <Input label="Title" value={form.title} onChange={(e) => update('title', e.target.value)} required />
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium">Description</span>
-            <textarea
-              className="field min-h-[100px]"
-              value={form.description}
-              onChange={(e) => update('description', e.target.value)}
-              required
-              minLength={10}
-            />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium">Category</span>
+        <div className="space-y-4 border border-border bg-surface p-5">
+          <Input
+            id="sell-title"
+            label="Title"
+            value={form.title}
+            onChange={(e) => update('title', e.target.value)}
+            required
+          />
+          <Textarea
+            id="sell-description"
+            label="Description"
+            value={form.description}
+            onChange={(e) => update('description', e.target.value)}
+            required
+            minLength={10}
+            className="min-h-[100px]"
+          />
+          <div className="space-y-1.5">
+            <label
+              htmlFor="sell-category"
+              className="block text-xs font-semibold uppercase tracking-[0.14em] text-muted"
+            >
+              Category
+            </label>
             <select
-              className="field"
+              id="sell-category"
+              className="field cursor-pointer"
               value={form.category_id}
               onChange={(e) => update('category_id', e.target.value)}
               required
@@ -116,11 +140,17 @@ export default function SellPage() {
                 </option>
               ))}
             </select>
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium">Condition</span>
+          </div>
+          <div className="space-y-1.5">
+            <label
+              htmlFor="sell-condition"
+              className="block text-xs font-semibold uppercase tracking-[0.14em] text-muted"
+            >
+              Condition
+            </label>
             <select
-              className="field"
+              id="sell-condition"
+              className="field cursor-pointer"
               value={form.condition}
               onChange={(e) => update('condition', e.target.value)}
             >
@@ -129,9 +159,23 @@ export default function SellPage() {
               <option value="good">Good</option>
               <option value="fair">Fair</option>
             </select>
-          </label>
-          <Input label="Price (ETB)" type="number" value={form.price} onChange={(e) => update('price', e.target.value)} required />
-          <Input label="Location" value={form.location} onChange={(e) => update('location', e.target.value)} placeholder="Addis Ababa" required />
+          </div>
+          <Input
+            id="sell-price"
+            label="Price (ETB)"
+            type="number"
+            value={form.price}
+            onChange={(e) => update('price', e.target.value)}
+            required
+          />
+          <Input
+            id="sell-location"
+            label="Location"
+            value={form.location}
+            onChange={(e) => update('location', e.target.value)}
+            placeholder="Addis Ababa"
+            required
+          />
           <Button
             type="button"
             onClick={() => setStep(2)}
@@ -144,56 +188,94 @@ export default function SellPage() {
             }
           >
             Next: photos
+            <ArrowRight className="h-4 w-4" aria-hidden strokeWidth={2} />
           </Button>
         </div>
       )}
 
       {step === 2 && (
-        <div className="space-y-4 rounded-2xl border border-black/8 bg-white p-5 shadow-card">
-          <label className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-brand-500/30 bg-brand-50/50 px-4 text-center text-sm transition hover:bg-brand-50">
-            <span className="font-medium">Drag & drop or click to upload</span>
-            <span className="mt-1 text-ink/60">Up to 5 images (JPG/PNG)</span>
+        <div className="space-y-4 border border-border bg-surface p-5">
+          <label className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-border bg-paper px-4 text-center transition hover:border-ink hover:bg-surface">
+            <span className="flex h-10 w-10 items-center justify-center bg-ink text-white">
+              <ImagePlus className="h-5 w-5" aria-hidden strokeWidth={1.75} />
+            </span>
+            <span className="text-sm font-medium text-ink">Drag & drop or click to upload</span>
+            <span className="text-xs text-muted">Up to 5 images (JPG/PNG)</span>
             <input
               type="file"
               accept="image/*"
               multiple
-              className="hidden"
+              className="sr-only"
+              aria-label="Upload listing photos"
               onChange={(e) => setFiles(Array.from(e.target.files || []).slice(0, 5))}
             />
           </label>
           {files.length > 0 && (
-            <ul className="space-y-1 text-sm">
+            <ul className="space-y-2">
               {files.map((f) => (
-                <li key={f.name}>{f.name}</li>
+                <li
+                  key={f.name}
+                  className="flex items-center gap-2 border border-border bg-paper px-3 py-2 text-sm text-ink"
+                >
+                  <Upload className="h-3.5 w-3.5 shrink-0 text-muted" aria-hidden strokeWidth={2} />
+                  <span className="truncate">{f.name}</span>
+                </li>
               ))}
             </ul>
           )}
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Button type="button" variant="ghost" onClick={() => setStep(1)}>
+              <ArrowLeft className="h-4 w-4" aria-hidden strokeWidth={2} />
               Back
             </Button>
             <Button type="button" onClick={() => setStep(3)} disabled={files.length === 0}>
               Next: preview
+              <ArrowRight className="h-4 w-4" aria-hidden strokeWidth={2} />
             </Button>
           </div>
         </div>
       )}
 
       {step === 3 && (
-        <form onSubmit={publish} className="space-y-4 rounded-2xl border border-black/8 bg-white p-5 shadow-card">
-          <h2 className="font-display text-xl font-semibold">Preview</h2>
-          <dl className="space-y-2 text-sm">
-            <div><dt className="text-ink/50">Title</dt><dd className="font-medium">{form.title}</dd></div>
-            <div><dt className="text-ink/50">Price</dt><dd className="font-medium">{Number(form.price).toLocaleString()} ETB</dd></div>
-            <div><dt className="text-ink/50">Location</dt><dd>{form.location}</dd></div>
-            <div><dt className="text-ink/50">Photos</dt><dd>{files.length} selected</dd></div>
+        <form onSubmit={publish} className="space-y-4 border border-border bg-surface p-5">
+          <h2 className="font-display text-2xl font-medium text-ink">Preview</h2>
+          <dl className="space-y-3 text-sm">
+            <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border pb-3">
+              <dt className="text-muted">Title</dt>
+              <dd className="font-medium text-ink">{form.title}</dd>
+            </div>
+            <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border pb-3">
+              <dt className="text-muted">Price</dt>
+              <dd className="font-medium text-accent-600">
+                {Number(form.price).toLocaleString()} ETB
+              </dd>
+            </div>
+            <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border pb-3">
+              <dt className="text-muted">Category</dt>
+              <dd className="text-ink">{categoryName || '—'}</dd>
+            </div>
+            <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border pb-3">
+              <dt className="text-muted">Condition</dt>
+              <dd>
+                <Badge tone="amber">{form.condition.replace('_', ' ')}</Badge>
+              </dd>
+            </div>
+            <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border pb-3">
+              <dt className="text-muted">Location</dt>
+              <dd className="text-ink">{form.location}</dd>
+            </div>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <dt className="text-muted">Photos</dt>
+              <dd className="text-ink">{files.length} selected</dd>
+            </div>
           </dl>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <div className="flex gap-2">
+          {error && <Alert tone="error">{error}</Alert>}
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Button type="button" variant="ghost" onClick={() => setStep(2)}>
+              <ArrowLeft className="h-4 w-4" aria-hidden strokeWidth={2} />
               Back
             </Button>
-            <Button type="submit" loading={busy}>
+            <Button type="submit" variant="secondary" loading={busy}>
               Publish listing
             </Button>
           </div>

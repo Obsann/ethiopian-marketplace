@@ -1,16 +1,14 @@
 import { ButtonHTMLAttributes } from 'react';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline' | 'inverse';
 
 const styles: Record<Variant, string> = {
-  primary:
-    'bg-brand-600 text-white shadow-sm hover:bg-brand-700 hover:shadow-md focus-visible:ring-brand-500',
-  secondary:
-    'bg-accent-400 text-ink shadow-sm hover:bg-accent-500 hover:shadow-md focus-visible:ring-accent-400',
-  ghost:
-    'bg-transparent text-ink hover:bg-black/5 focus-visible:ring-brand-500',
-  danger:
-    'bg-red-600 text-white shadow-sm hover:bg-red-700 focus-visible:ring-red-500',
+  primary: 'bg-ink text-white hover:bg-ink/90 focus-visible:ring-ink',
+  secondary: 'bg-accent-600 text-white hover:bg-accent-700 focus-visible:ring-accent-600',
+  outline: 'border border-ink bg-transparent text-ink hover:bg-ink hover:text-white focus-visible:ring-ink',
+  inverse: 'border border-white/40 bg-white/10 text-white backdrop-blur-sm hover:bg-white hover:text-ink',
+  ghost: 'bg-transparent text-ink hover:bg-stone-100 focus-visible:ring-ink',
+  danger: 'bg-danger-600 text-white hover:bg-danger-700 focus-visible:ring-danger-600',
 };
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -28,7 +26,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${styles[variant]} ${className}`}
+      className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-none px-5 py-3 text-xs font-semibold uppercase tracking-[0.14em] transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${styles[variant]} ${className}`}
       disabled={disabled || loading}
       {...props}
     >

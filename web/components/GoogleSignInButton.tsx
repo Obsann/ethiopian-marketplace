@@ -37,7 +37,7 @@ export function GoogleSignInButton({
     <>
       <a
         href={href}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-black/15 bg-white px-4 py-2.5 text-sm font-semibold text-ink hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+        className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-none border border-border bg-paper px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-ink transition duration-300 hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
       >
         <svg aria-hidden className="h-4 w-4" viewBox="0 0 24 24">
           <path
@@ -66,10 +66,10 @@ export function GoogleSignInButton({
 
 export function AuthDivider() {
   return (
-    <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-ink/40">
-      <span className="h-px flex-1 bg-black/10" />
+    <div className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
+      <span className="h-px flex-1 bg-border" />
       or
-      <span className="h-px flex-1 bg-black/10" />
+      <span className="h-px flex-1 bg-border" />
     </div>
   );
 }

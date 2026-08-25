@@ -65,6 +65,24 @@ app.use('/api/payments', paymentsRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/verifications', verificationsRoutes);
 
+/** Root is the API host — send browsers to the Next.js app. */
+app.get('/', (req, res) => {
+  const frontend = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
+  const wantsJson = req.accepts(['html', 'json']) === 'json';
+  if (wantsJson) {
+    return res.json({
+      success: true,
+      data: {
+        name: 'SuqET API',
+        health: '/api/health',
+        frontend,
+      },
+      message: 'API is running. Open the frontend URL in a browser.',
+    });
+  }
+  return res.redirect(302, frontend);
+});
+
 app.use(errorHandler);
 
 const PORT = Number(process.env.PORT) || 4000;
