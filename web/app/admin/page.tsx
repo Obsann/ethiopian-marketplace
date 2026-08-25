@@ -93,8 +93,8 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const [r, v] = await Promise.all([
-        api<{ items: ReportRow[] }>('/api/reports', { token }),
-        api<VerificationRow[]>('/api/verifications/pending', { token }),
+        api<{ items: ReportRow[] }>('/api/reports', { token: token ?? undefined }),
+        api<VerificationRow[]>('/api/verifications/pending', { token: token ?? undefined }),
       ]);
       setReports(r.data.items);
       setVerifications(v.data);
@@ -115,7 +115,7 @@ export default function AdminPage() {
     if (!user) return;
     await api(`/api/reports/${id}`, {
       method: 'PATCH',
-      token,
+      token: token ?? undefined,
       body: JSON.stringify({ status }),
     });
     setReports((rows) => rows.filter((r) => r.id !== id));
@@ -125,7 +125,7 @@ export default function AdminPage() {
     if (!user) return;
     await api(`/api/verifications/${id}/review`, {
       method: 'PATCH',
-      token,
+      token: token ?? undefined,
       body: JSON.stringify({ status }),
     });
     setVerifications((rows) => rows.filter((v) => v.id !== id));

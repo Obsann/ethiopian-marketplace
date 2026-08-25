@@ -12,7 +12,7 @@ export class ApiError extends Error {
 
 export async function api<T>(
   path: string,
-  options: RequestInit & { token?: string } = {}
+  options: RequestInit & { token?: string | null } = {}
 ): Promise<ApiResponse<T>> {
   const { token, headers, ...rest } = options;
   let res: Response;

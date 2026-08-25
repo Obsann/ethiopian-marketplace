@@ -10,7 +10,9 @@ export type NotificationType =
   | 'listing_sold'
   | 'verification_approved'
   | 'verification_rejected'
-  | 'payment_failed';
+  | 'payment_failed'
+  | 'payment_refunded'
+  | 'funds_released';
 
 export interface User {
   id: string;
@@ -70,22 +72,6 @@ export interface Transaction {
   status: TransactionStatus;
   created_at: string;
   listing?: { id: string; title: string; status: string };
-}
-
-export interface Notification {
-  id: string;
-  type:
-    | 'new_message'
-    | 'new_offer'
-    | 'listing_sold'
-    | 'verification_approved'
-    | 'verification_rejected'
-    | 'payment_failed'
-    | 'payment_refunded'
-    | 'funds_released';
-  message: string;
-  is_read: boolean;
-  created_at: string;
 }
 
 export interface ConversationPreview {
