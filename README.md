@@ -14,8 +14,6 @@ This README is written for **judges**. It is honest about what works in the demo
 | Hosted demo | _add your Render/Vercel URL here_ |
 | Video walkthrough | _add your video URL here_ |
 
-See [CONTRIBUTIONS.md](./CONTRIBUTIONS.md) for build history.
-
 ---
 
 ## The Project

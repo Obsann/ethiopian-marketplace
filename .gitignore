@@ -45,3 +45,7 @@ _extracted/
 *.log
 coverage/
 .turbo/
+
+# Local only ? do not publish
+CONTRIBUTIONS.md
+
