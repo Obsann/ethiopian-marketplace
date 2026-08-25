@@ -1,51 +1,53 @@
 # SuqET — Ethiopian Second-Hand Marketplace
 
-SuqET is a hackathon demo for buying and selling used goods in Ethiopia. You can browse listings, message the other person, pay with **Chapa TEST** checkout, and (as admin) review private KYC photos.
+**Phase 4 final submission** · Organizer: Seblewongel · Deadline: **26 August 2026**
 
-This README is written for **judges**. It is honest about what works in the demo and what is not live production.
+SuqET is a full-stack marketplace for buying and selling used goods in Ethiopia. Buyers browse listings, chat with sellers, and pay through **Chapa TEST** checkout. Sellers list items and submit private KYC. Admins review verification photos that never appear on public listings.
 
-**Phase 4 final submission** (organizer: Seblewongel). Deadline: **26 August 2026**.
+This README is written for **hackathon judges**: clear about what the demo proves, how to run it in minutes, and what is intentionally not live production.
 
 | Submission item | Link |
 |-----------------|------|
 | GitHub repo | https://github.com/kikemal/ethiopian-marketplace |
-| Demo branch (until merged to `main`) | https://github.com/kikemal/ethiopian-marketplace/tree/feat/hackathon-demo-ship |
-| Pull request | https://github.com/kikemal/ethiopian-marketplace/pull/1 |
-| Hosted demo | _add your Render/Vercel URL here_ |
-| Video walkthrough | _add your video URL here_ |
+| Hosted demo | _add public URL before submission_ |
+| Video walkthrough | _add video URL before submission_ |
 
 ---
 
 ## The Project
 
-SuqET is a two-folder marketplace:
+**Problem.** Informal second-hand trade in Ethiopia relies on social media and private chats. That makes discovery hard, payment trust thin, and seller identity difficult to verify without exposing IDs publicly.
 
-| Folder | What it is |
-|--------|------------|
-| `web/` | Next.js 14 app (the screens). **No secret keys.** Only `NEXT_PUBLIC_API_URL`. |
-| `backend/` | Express API (Prisma, PostgreSQL, JWT, Chapa, Cloudinary, SMTP, Socket.io). **All secrets live in `backend/.env` only.** |
+**Solution.** SuqET gives buyers and sellers a shared product surface: searchable listings, in-app messaging, TEST-mode payment checkout, order status in the app, and admin-reviewed KYC stored privately.
 
-**What you can show in a demo**
+| Folder | Role |
+|--------|------|
+| `web/` | Next.js 14 App Router + Tailwind. **No secret keys** — only `NEXT_PUBLIC_API_URL`. |
+| `backend/` | Express + TypeScript + Prisma + PostgreSQL + JWT + Socket.io + Chapa + Cloudinary. **All secrets live in `backend/.env` only.** |
 
-- A buyer browses used listings (phones, furniture, clothes, and more), chats with a seller, and pays through checkout.
-- A seller posts a listing, sees orders, and can submit ID + face photos for KYC.
-- An admin reviews those KYC photos in the admin UI (they are **not** public listing images).
+**Stack at a glance:** Node.js · Express · Prisma/PostgreSQL · Next.js 14 · Socket.io · Chapa (TEST) · Cloudinary (optional) · JWT (httpOnly cookie)
+
+**What the demo proves**
+
+- End-to-end buyer → chat → checkout → order status flow
+- Seller listing + private KYC upload + admin review
+- Secrets never shipped to the frontend
 
 **What this is not**
 
-- It is **not** live escrow. “Released” only updates our database. It does **not** automatically pay the seller.
-- Chapa is **TEST mode** when you use a real `CHASECK_TEST-…` key. If the key still contains `xxx` (the placeholder), Buy Now uses an **in-app mock** checkout — that is not a bank transfer.
-- Email on a hosted server is optional and often broken (Gmail SMTP; Render blocks outbound SMTP). Local demo still works without mail.
+- **Not live escrow.** “Released” / “refunded” update **our database**. They do not automatically pay the seller or reverse a real bank transfer.
+- **Chapa is TEST mode** when `CHAPA_SECRET_KEY` is a real `CHASECK_TEST-…` key. If the key still contains the `xxx` placeholder, Buy Now uses an **in-app mock** checkout — not a bank transfer.
+- Email (Gmail SMTP) is optional. Hosted platforms often block outbound SMTP; local demo works without mail.
 
 ---
 
 ## Setup
 
-You need **Node.js 18.17+**, **npm**, and **Docker** (for Postgres). Copy example env files. Never commit `.env` files.
+Requirements: **Node.js 18.17+**, **npm**, **Docker** (Postgres). Copy example env files. Never commit `.env` files.
 
 ### Demo accounts (after seed)
 
-Password for every seeded account is `Password123!`. Copy any row:
+Password for every seeded account: `Password123!`
 
 | Role | Email | Password |
 |------|-------|----------|
@@ -53,9 +55,9 @@ Password for every seeded account is `Password123!`. Copy any row:
 | Seller | abebe@seller.et | Password123! |
 | Admin | admin@marketplace.et | Password123! |
 
-Same password also works for extra seed users: `tigist@seller.et`, `dawit@seller.et`, `yonas@buyer.et`, `hanna@buyer.et`.
+Also seeded: `tigist@seller.et`, `dawit@seller.et`, `yonas@buyer.et`, `hanna@buyer.et` (same password).
 
-Seed **deletes existing marketplace rows** and recreates demo data. It refuses to run when `NODE_ENV=production` unless `FORCE_SEED=true`.
+`npm run seed` **deletes existing marketplace rows** and recreates demo data. It refuses to run when `NODE_ENV=production` unless `FORCE_SEED=true`.
 
 ### 1. Postgres
 
@@ -74,9 +76,9 @@ npm run seed
 npm run dev
 ```
 
-Fill in `backend/.env` as needed. For real Chapa TEST checkout, replace `CHAPA_SECRET_KEY` with a dashboard **Test** key (`CHASECK_TEST-…`). Leave the `xxx` placeholder only if you want mock checkout.
+Edit `backend/.env` as needed. For real Chapa TEST checkout, set `CHAPA_SECRET_KEY` to a dashboard **Test** key (`CHASECK_TEST-…`). Leave the `xxx` placeholder only if you want mock checkout.
 
-`GET` or `POST /api/health` should return `{ "success": true, ... }`.
+Health check: `GET` or `POST /api/health` → `{ "success": true, ... }`.
 
 ### 3. Frontend — http://localhost:3000
 
@@ -87,7 +89,7 @@ npm install
 npm run dev
 ```
 
-`web/.env.local` only needs:
+`web/.env.local` needs only:
 
 ```
 NEXT_PUBLIC_API_URL=http://localhost:4000
@@ -95,31 +97,32 @@ NEXT_PUBLIC_API_URL=http://localhost:4000
 
 ### API shape
 
-Every JSON response looks like:
+Every JSON response:
 
 ```json
 { "success": true, "data": {}, "message": "..." }
 ```
 
-Errors add `error` when useful. Auth uses an httpOnly cookie `etm_sid` (a Bearer token still works).
+Errors may include `error`. Auth uses httpOnly cookie `etm_sid` (Bearer token still accepted).
 
 ---
 
 ## Features
 
-- **Browse and search** listings by category, text, and location. Mobile-first layout (works at 375px width).
-- **Accounts** — register, log in, log out. Optional **Google sign-in**. Forgot / reset password and email verify (mail is optional in local/dev).
-- **Inbox** — chat about a listing with the other user (Socket.io), plus a notifications menu.
-- **Sell** — sellers create listings with photos. Seller dashboard for their items and sales.
-- **Buy Now** — Chapa **TEST** hosted checkout when a real test secret is set. **Mock checkout only** if the key contains `xxx`.
-- **Orders** — buyer and seller see payment status (`held` / `released` / `refunded`). Seller can mark delivery confirmed; buyer can request a refund. Those buttons update **our DB**. They are **not** live escrow or automatic seller payouts.
-- **KYC** — sellers upload ID + face photos. Files stay **private** (disk under `backend/private/kyc` or Cloudinary private). Admins review them in **Admin**.
-- **Admin** — pending KYC, listing reports, and the same payment status tools.
+- **Browse & search** — category, text, location; mobile-first (375px).
+- **Accounts** — register / login / logout; optional Google OAuth; forgot/reset password and email verify when SMTP is configured.
+- **Inbox** — listing-scoped chat (Socket.io) and notifications.
+- **Sell** — photo listings, seller dashboard for items and sales.
+- **Buy Now** — Chapa **TEST** hosted checkout with a real test secret; **mock checkout** only when the key still contains `xxx`.
+- **Orders** — payment status `held` / `released` / `refunded`. Seller can confirm delivery; buyer can request a refund. Those actions update **our DB** — not live escrow or automatic payouts.
+- **KYC** — sellers upload ID + face photos. Files stay **private** (disk under `backend/private/kyc` or Cloudinary private). Admins review in **Admin**; photos are not public listing images.
+- **Admin** — pending KYC, listing reports, payment status tools.
+- **i18n assist** — Google Translate for Amharic, Oromo, and Tigrinya (navbar / floating widget).
 - **Health** — `GET` and `POST /api/health`.
 
 **Payments (honest)**
 
-- Chapa test phones (from [Chapa docs](https://developer.chapa.co/docs)): `0900123456`, OTP `12345`.
+- Chapa test phones ([docs](https://developer.chapa.co/docs)): `0900123456`, OTP `12345`.
 - **localhost cannot receive Chapa webhooks.** After paying, the app returns to `/payments/return` and calls `POST /api/payments/sync` to verify the transaction.
 - `cd backend && npm test` runs webhook-signature unit tests.
 
@@ -132,31 +135,46 @@ Errors add `error` when useful. Auth uses an httpOnly cookie `etm_sid` (a Bearer
 
 ## Usage
 
-Open **http://localhost:3000**. Use two browsers (or a normal window + a private window) if you want buyer and seller at the same time.
+**Five-minute judge path:** open http://localhost:3000 → log in as Sara → open a listing → chat → Buy Now → return to Orders. Use a second browser (or private window) for Abebe or Admin in parallel.
 
-### Buyer path (Sara)
+### Buyer (Sara)
 
-1. Log in as `sara@buyer.et` / `Password123!`.
-2. Home or **Browse** — open a listing (for example Samsung Galaxy A14).
-3. **Inbox** / the chat on the listing — message the seller (seed data already has a short thread).
-4. **Buy Now** — you leave the site for Chapa TEST checkout (or the mock page if the key still has `xxx`).
-5. After pay, you return to `/payments/return`, then **Orders**. Status should move to **held** when sync succeeds.
-6. On **Orders**, the buyer can **Request refund** while status is held (DB flag; Chapa refund is attempted in TEST, not a live bank recall).
+1. Log in: `sara@buyer.et` / `Password123!`
+2. **Browse** — open a listing (e.g. Samsung Galaxy A14)
+3. Message the seller from the listing or **Inbox** (seed includes a short thread)
+4. **Buy Now** — Chapa TEST checkout, or mock page if the key still has `xxx`
+5. After pay → `/payments/return` → **Orders** (status **held** when sync succeeds)
+6. While **held**, buyer may **Request refund** (DB flag; Chapa refund may be attempted in TEST — not a live bank recall)
 
-### Seller path (Abebe)
+### Seller (Abebe)
 
-1. Log in as `abebe@seller.et` / `Password123!`.
-2. **Sell** — create a listing with photos, price in ETB, and location.
-3. **Dashboard** — see your listings and sales.
-4. **Orders** — when a payment is **held**, **Confirm delivery** marks it **released** in our database. That is **not** an automatic payout. Settle seller money in the Chapa dashboard if you need to.
-5. Open **Verify** (`/verify`) — upload an ID photo and a face photo. Those files are private.
+1. Log in: `abebe@seller.et` / `Password123!`
+2. **Sell** — create a listing (photos, ETB price, location)
+3. **Dashboard** — listings and sales
+4. **Orders** — **Confirm delivery** on a **held** payment marks it **released** in our DB only (not an automatic payout; settle in the Chapa dashboard if needed)
+5. **Verify** (`/verify`) — upload ID + face photos (private)
 
-### Admin path
+### Admin
 
-1. Log in as `admin@marketplace.et` / `Password123!`.
-2. **Admin** — review KYC (approve or reject). Photos load only for the admin session; they are not public URLs.
-3. Review listing reports on the same page.
+1. Log in: `admin@marketplace.et` / `Password123!`
+2. **Admin** — approve/reject KYC (photos load only for the admin session)
+3. Review listing reports on the same page
 
 ### Optional Google sign-in
 
-Only works if `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_CALLBACK_URL` are set in `backend/.env` and match the Google Cloud client. After Google redirects, the app exchanges a one-time code (`POST /api/auth/oauth/exchange`) so the token is not left in the URL.
+Requires `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_CALLBACK_URL` in `backend/.env`. After Google redirects, the app exchanges a one-time code (`POST /api/auth/oauth/exchange`) so the token is not left in the URL.
+
+---
+
+## Deploy
+
+Production target: **Render** (API + PostgreSQL + web).
+
+| Item | Status |
+|------|--------|
+| Hosted demo URL | _add public URL before submission_ |
+| Infra config | `render.yaml` when present in the repo root (Blueprint) |
+
+Secrets stay on the server (Render env vars mapped from `backend/.env` patterns). The web service only receives `NEXT_PUBLIC_API_URL` pointing at the public API.
+
+Local Docker Compose remains the supported path for judges who prefer to run the stack themselves (see **Setup**).
