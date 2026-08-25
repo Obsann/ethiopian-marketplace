@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Alert } from '@/components/ui/Alert';
+import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 
 function PaymentReturn() {
@@ -54,21 +55,23 @@ function PaymentReturn() {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-md space-y-4 rounded-xl border border-border bg-surface p-6 text-center">
-        <h1 className="font-display text-2xl font-semibold text-ink">Payment status</h1>
-        <Alert tone="error">{error}</Alert>
-        <Link
-          href="/orders"
-          className="inline-block cursor-pointer text-sm font-medium text-brand-600 transition duration-180 hover:text-brand-700"
-        >
-          Back to orders
-        </Link>
+      <div className="page-shell mx-auto max-w-md space-y-5 pt-24 sm:pt-28 pb-16">
+        <div className="space-y-5 border border-border bg-surface p-6 text-center">
+          <p className="eyebrow">Payment</p>
+          <h1 className="font-display text-3xl font-medium text-ink">Payment status</h1>
+          <Alert tone="error">{error}</Alert>
+          <Link href="/orders">
+            <Button variant="outline" className="w-full sm:w-auto">
+              Back to orders
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center gap-3 py-16">
+    <div className="page-shell flex flex-col items-center gap-3 pt-24 sm:pt-28 pb-16">
       <Spinner />
       <p className="text-sm text-muted">Confirming your Chapa payment…</p>
     </div>
@@ -79,7 +82,7 @@ export default function PaymentReturnPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex justify-center py-16">
+        <div className="page-shell flex justify-center pt-24 sm:pt-28 pb-16">
           <Spinner />
         </div>
       }

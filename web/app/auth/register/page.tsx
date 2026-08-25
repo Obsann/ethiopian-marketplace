@@ -54,117 +54,126 @@ export default function RegisterPage() {
 
   if (done) {
     return (
-      <div className="mx-auto max-w-md space-y-6">
-        <div>
-          <h1 className="page-title">Check your email</h1>
-          <p className="mt-1 text-sm text-muted">Confirm your address to finish signing up.</p>
-        </div>
-        <div className="space-y-4 rounded-xl border border-border bg-surface p-5">
-          <Alert tone="success">
-            {doneMessage ||
-              `We sent a confirmation link to ${form.email}. Confirm it before you log in.`}
-          </Alert>
-          {verifyUrl && (
-            <p className="text-sm text-muted">
-              Local dev (SMTP not sending):{' '}
-              <Link
-                href={verifyUrl}
-                className="break-all cursor-pointer text-brand-600 hover:underline"
-              >
-                Open confirmation link
-              </Link>
-            </p>
-          )}
-          <Link
-            href="/auth/login"
-            className="inline-block cursor-pointer text-sm text-brand-600 hover:underline"
-          >
-            Back to log in
-          </Link>
+      <div className="page-shell pt-24 sm:pt-28 pb-16">
+        <div className="mx-auto max-w-md space-y-8">
+          <div>
+            <p className="eyebrow">Account</p>
+            <h1 className="mt-3 font-display text-4xl font-medium text-ink">Check your email</h1>
+            <p className="mt-2 text-sm text-muted">Confirm your address to finish signing up.</p>
+          </div>
+          <div className="space-y-5 border border-border bg-surface p-6 sm:p-8">
+            <Alert tone="success">
+              {doneMessage ||
+                `We sent a confirmation link to ${form.email}. Confirm it before you log in.`}
+            </Alert>
+            {verifyUrl && (
+              <p className="text-sm text-muted">
+                Local dev (SMTP not sending):{' '}
+                <Link
+                  href={verifyUrl}
+                  className="break-all cursor-pointer text-accent-600 transition hover:text-accent-700"
+                >
+                  Open confirmation link
+                </Link>
+              </p>
+            )}
+            <Link
+              href="/auth/login"
+              className="inline-block cursor-pointer text-xs font-semibold uppercase tracking-[0.16em] text-muted transition hover:text-ink"
+            >
+              Back to log in
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
-      <div>
-        <h1 className="page-title">Create account</h1>
-        <p className="mt-1 text-sm text-muted">Join Ethiopia&apos;s second-hand marketplace.</p>
-      </div>
-      <div className="space-y-4 rounded-xl border border-border bg-surface p-5">
-        <div className="block w-full space-y-1.5">
-          <label htmlFor="register-role" className="block text-sm font-medium text-ink">
-            I want to
-          </label>
-          <select
-            id="register-role"
-            name="role"
-            className="field cursor-pointer"
-            value={form.role}
-            onChange={(e) => update('role', e.target.value)}
-          >
-            <option value="buyer">Buy items</option>
-            <option value="seller">Sell items</option>
-          </select>
+    <div className="page-shell pt-24 sm:pt-28 pb-16">
+      <div className="mx-auto max-w-md space-y-8">
+        <div>
+          <p className="eyebrow">Account</p>
+          <h1 className="mt-3 font-display text-4xl font-medium text-ink">Create account</h1>
+          <p className="mt-2 text-sm text-muted">Join Ethiopia&apos;s second-hand marketplace.</p>
         </div>
-        <GoogleSignInButton role={form.role} />
-        <form onSubmit={onSubmit} className="space-y-4">
-          <Input
-            id="register-name"
-            label="Full name"
-            name="name"
-            value={form.name}
-            onChange={(e) => update('name', e.target.value)}
-            error={errors.name}
-            required
-            autoComplete="name"
-          />
-          <Input
-            id="register-email"
-            label="Email"
-            type="email"
-            name="email"
-            value={form.email}
-            onChange={(e) => update('email', e.target.value)}
-            error={errors.email}
-            required
-            autoComplete="email"
-          />
-          <Input
-            id="register-phone"
-            label="Phone"
-            name="phone"
-            value={form.phone}
-            onChange={(e) => update('phone', e.target.value)}
-            error={errors.phone}
-            placeholder="+2519…"
-            required
-            autoComplete="tel"
-          />
-          <Input
-            id="register-password"
-            label="Password"
-            type="password"
-            name="password"
-            value={form.password}
-            onChange={(e) => update('password', e.target.value)}
-            error={errors.password}
-            required
-            autoComplete="new-password"
-          />
-          {formError && <Alert tone="error">{formError}</Alert>}
-          <Button type="submit" variant="primary" className="w-full" loading={loading}>
-            Sign up
-          </Button>
-        </form>
+        <div className="space-y-5 border border-border bg-surface p-6 sm:p-8">
+          <div className="block w-full space-y-1.5">
+            <label htmlFor="register-role" className="block text-sm font-medium text-ink">
+              I want to
+            </label>
+            <select
+              id="register-role"
+              name="role"
+              className="field cursor-pointer"
+              value={form.role}
+              onChange={(e) => update('role', e.target.value)}
+            >
+              <option value="buyer">Buy items</option>
+              <option value="seller">Sell items</option>
+            </select>
+          </div>
+          <GoogleSignInButton role={form.role} />
+          <form onSubmit={onSubmit} className="space-y-4">
+            <Input
+              id="register-name"
+              label="Full name"
+              name="name"
+              value={form.name}
+              onChange={(e) => update('name', e.target.value)}
+              error={errors.name}
+              required
+              autoComplete="name"
+            />
+            <Input
+              id="register-email"
+              label="Email"
+              type="email"
+              name="email"
+              value={form.email}
+              onChange={(e) => update('email', e.target.value)}
+              error={errors.email}
+              required
+              autoComplete="email"
+            />
+            <Input
+              id="register-phone"
+              label="Phone"
+              name="phone"
+              value={form.phone}
+              onChange={(e) => update('phone', e.target.value)}
+              error={errors.phone}
+              placeholder="+2519…"
+              required
+              autoComplete="tel"
+            />
+            <Input
+              id="register-password"
+              label="Password"
+              type="password"
+              name="password"
+              value={form.password}
+              onChange={(e) => update('password', e.target.value)}
+              error={errors.password}
+              required
+              autoComplete="new-password"
+            />
+            {formError && <Alert tone="error">{formError}</Alert>}
+            <Button type="submit" variant="primary" className="w-full" loading={loading}>
+              Sign up
+            </Button>
+          </form>
+        </div>
+        <p className="text-center text-sm text-muted">
+          Already have an account?{' '}
+          <Link
+            href="/auth/login"
+            className="cursor-pointer font-medium text-accent-600 transition hover:text-accent-700"
+          >
+            Log in
+          </Link>
+        </p>
       </div>
-      <p className="text-center text-sm text-muted">
-        Already have an account?{' '}
-        <Link href="/auth/login" className="cursor-pointer text-brand-600 hover:underline">
-          Log in
-        </Link>
-      </p>
     </div>
   );
 }

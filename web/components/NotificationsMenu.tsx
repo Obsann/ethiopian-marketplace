@@ -37,7 +37,7 @@ function timeAgo(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
-export function NotificationsMenu() {
+export function NotificationsMenu({ inverted = false }: { inverted?: boolean }) {
   const { token, user } = useAuth();
   const root = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -105,7 +105,11 @@ export function NotificationsMenu() {
     <div className="relative" ref={root}>
       <button
         type="button"
-        className="relative cursor-pointer rounded-md p-2 text-muted transition duration-180 hover:bg-slate-100 hover:text-ink"
+        className={`relative cursor-pointer p-2 transition duration-300 ${
+          inverted
+            ? 'text-white/80 hover:bg-white/10 hover:text-white'
+            : 'text-muted hover:bg-stone-100 hover:text-ink'
+        }`}
         onClick={() => setOpen((v) => !v)}
         aria-label={label}
         aria-expanded={open}
@@ -113,7 +117,7 @@ export function NotificationsMenu() {
       >
         <Bell className="h-5 w-5" aria-hidden strokeWidth={1.8} />
         {unread > 0 && (
-          <span className="absolute right-0.5 top-0.5 min-w-[1.05rem] rounded-full bg-brand-600 px-1 text-center text-[10px] font-semibold leading-4 text-white">
+          <span className="absolute right-0.5 top-0.5 min-w-[1.05rem] bg-accent-600 px-1 text-center text-[10px] font-semibold leading-4 text-white">
             {unread > 9 ? '9+' : unread}
           </span>
         )}
@@ -122,7 +126,7 @@ export function NotificationsMenu() {
         <div
           role="dialog"
           aria-label="Notifications"
-          className="absolute right-0 z-50 mt-2 w-[min(calc(100vw-2rem),20rem)] overflow-hidden rounded-xl border border-border bg-surface shadow-card"
+          className="absolute right-0 z-50 mt-2 w-[min(calc(100vw-2rem),20rem)] overflow-hidden border border-border bg-surface shadow-float"
         >
           <div className="flex items-center justify-between border-b border-border px-3 py-2">
             <span className="text-sm font-semibold text-ink">Notifications</span>

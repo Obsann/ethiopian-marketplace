@@ -30,17 +30,18 @@ export default function InboxPage() {
 
   if (isLoading || !user) {
     return (
-      <div className="flex justify-center py-16">
+      <div className="page-shell flex justify-center pt-24 sm:pt-28 pb-16">
         <Spinner />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell space-y-8 pt-24 sm:pt-28 pb-16">
       <div>
-        <h1 className="font-display text-3xl font-semibold text-ink">Inbox</h1>
-        <p className="mt-1 text-sm text-muted">Conversations about listings.</p>
+        <p className="eyebrow">Messages</p>
+        <h1 className="mt-3 font-display text-display font-medium text-ink">Inbox</h1>
+        <p className="mt-3 text-sm text-muted">Conversations about listings.</p>
       </div>
       {error && <Alert tone="error">{error}</Alert>}
       {items.length === 0 ? (
@@ -57,7 +58,7 @@ export default function InboxPage() {
             <li key={`${c.listing_id}-${c.other_user.id}`}>
               <Link
                 href={`/inbox/${c.listing_id}/${c.other_user.id}`}
-                className="block cursor-pointer rounded-xl border border-border bg-surface p-4 transition duration-180 hover:border-brand-300"
+                className="block border border-border bg-surface p-5 transition hover:bg-paper"
               >
                 <p className="font-medium text-ink">
                   {c.other_user.name} · {c.listing_title}

@@ -26,14 +26,17 @@ function FileField({
 }) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-medium text-ink">
+      <label
+        htmlFor={id}
+        className="block text-xs font-semibold uppercase tracking-[0.14em] text-muted"
+      >
         {label}
       </label>
       <label
         htmlFor={id}
-        className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-paper px-4 py-8 text-center transition duration-180 hover:border-brand-300 hover:bg-brand-50/40"
+        className="flex cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-border bg-paper px-4 py-8 text-center transition hover:border-ink hover:bg-surface"
       >
-        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface text-brand-600">
+        <span className="flex h-10 w-10 items-center justify-center bg-ink text-white">
           <Icon className="h-5 w-5" aria-hidden strokeWidth={1.75} />
         </span>
         <span className="text-sm font-medium text-ink">
@@ -93,31 +96,26 @@ export default function VerifyPage() {
 
   if (isLoading || !canSubmit) {
     return (
-      <div className="flex justify-center py-16" aria-busy="true" aria-label="Loading">
+      <div className="page-shell flex justify-center pt-24 sm:pt-28 pb-16" aria-busy="true" aria-label="Loading">
         <Spinner />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
-      <div className="space-y-3 text-center sm:text-left">
-        <div
-          className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 sm:mx-0"
-          aria-hidden
-        >
+    <div className="page-shell mx-auto max-w-md space-y-8 pt-24 sm:pt-28 pb-16">
+      <div className="space-y-4">
+        <div className="flex h-12 w-12 items-center justify-center bg-ink text-white" aria-hidden>
           <ShieldCheck className="h-6 w-6" strokeWidth={1.75} />
         </div>
         <div>
-          <h1 className="page-title">Get verified</h1>
-          <p className="muted mt-1">Upload a clear ID photo and a selfie.</p>
+          <p className="eyebrow">Trust</p>
+          <h1 className="mt-3 font-display text-display font-medium text-ink">Get verified</h1>
+          <p className="mt-3 text-sm text-muted">Upload a clear ID photo and a selfie.</p>
         </div>
       </div>
 
-      <form
-        onSubmit={onSubmit}
-        className="space-y-4 rounded-xl border border-border bg-surface p-4 sm:p-5"
-      >
+      <form onSubmit={onSubmit} className="space-y-4 border border-border bg-surface p-5">
         <FileField
           id="verify-id-image"
           label="ID image"

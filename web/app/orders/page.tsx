@@ -61,74 +61,82 @@ function OrdersContent() {
 
   if (isLoading || !user) {
     return (
-      <div className="flex justify-center py-16">
+      <div className="page-shell flex justify-center pt-24 sm:pt-28 pb-16">
         <Spinner />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-3xl font-semibold text-ink">Orders</h1>
-        <p className="mt-1 text-sm text-muted">Purchases and sales tied to your account.</p>
-      </div>
-      {paid && (
-        <Alert tone="success">
-          Payment submitted. This page updates when the payment is confirmed and held.
-        </Alert>
-      )}
-      {error && <Alert tone="error">{error}</Alert>}
-      {items.length === 0 ? (
-        <EmptyState
-          icon={ShoppingBag}
-          title="No orders yet"
-          description="When you buy or sell, escrow transactions will appear here."
-          actionHref="/listings"
-          actionLabel="Browse listings"
-        />
-      ) : (
-        <ul className="space-y-3">
-          {items.map((tx) => {
-            const role = tx.buyer_id === user.id ? 'Bought' : 'Sold';
-            return (
-              <li key={tx.id} className="rounded-xl border border-border bg-surface p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-muted">{role}</p>
-                    <Link
-                      href={`/listings/${tx.listing_id}`}
-                      className="cursor-pointer font-medium text-ink transition duration-180 hover:text-brand-600"
-                    >
-                      {tx.listing?.title || 'Listing'}
-                    </Link>
-                    <p className="mt-1 text-sm font-medium text-accent-600">
-                      {tx.amount.toLocaleString()} ETB
-                    </p>
+    <div>
+      <section className="border-b border-border bg-ink text-white">
+        <div className="page-shell pt-24 sm:pt-28 pb-10 sm:pb-12">
+          <p className="eyebrow text-white/45">Escrow</p>
+          <h1 className="mt-3 font-display text-display font-medium">Orders</h1>
+          <p className="mt-3 max-w-lg text-sm text-white/60">
+            Purchases and sales tied to your account.
+          </p>
+        </div>
+      </section>
+
+      <div className="page-shell space-y-6 py-10 pb-16">
+        {paid && (
+          <Alert tone="success">
+            Payment submitted. This page updates when the payment is confirmed and held.
+          </Alert>
+        )}
+        {error && <Alert tone="error">{error}</Alert>}
+        {items.length === 0 ? (
+          <EmptyState
+            icon={ShoppingBag}
+            title="No orders yet"
+            description="When you buy or sell, escrow transactions will appear here."
+            actionHref="/listings"
+            actionLabel="Browse listings"
+          />
+        ) : (
+          <ul className="space-y-3">
+            {items.map((tx) => {
+              const role = tx.buyer_id === user.id ? 'Bought' : 'Sold';
+              return (
+                <li key={tx.id} className="border border-border bg-surface p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="eyebrow">{role}</p>
+                      <Link
+                        href={`/listings/${tx.listing_id}`}
+                        className="mt-2 block font-medium text-ink transition hover:underline"
+                      >
+                        {tx.listing?.title || 'Listing'}
+                      </Link>
+                      <p className="mt-2 font-medium text-accent-600">
+                        {tx.amount.toLocaleString()} ETB
+                      </p>
+                    </div>
+                    <Badge tone={tone[tx.status] || 'gray'}>{tx.status}</Badge>
                   </div>
-                  <Badge tone={tone[tx.status] || 'gray'}>{tx.status}</Badge>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {tx.status === 'held' && tx.seller_id === user.id && (
-                    <Button loading={busyId === tx.id} onClick={() => act('release', tx.id)}>
-                      Confirm delivery
-                    </Button>
-                  )}
-                  {tx.status === 'held' && tx.buyer_id === user.id && (
-                    <Button
-                      variant="ghost"
-                      loading={busyId === tx.id}
-                      onClick={() => act('refund', tx.id)}
-                    >
-                      Request refund
-                    </Button>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {tx.status === 'held' && tx.seller_id === user.id && (
+                      <Button loading={busyId === tx.id} onClick={() => act('release', tx.id)}>
+                        Confirm delivery
+                      </Button>
+                    )}
+                    {tx.status === 'held' && tx.buyer_id === user.id && (
+                      <Button
+                        variant="ghost"
+                        loading={busyId === tx.id}
+                        onClick={() => act('refund', tx.id)}
+                      >
+                        Request refund
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
@@ -137,7 +145,7 @@ export default function OrdersPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex justify-center py-16">
+        <div className="page-shell flex justify-center pt-24 sm:pt-28 pb-16">
           <Spinner />
         </div>
       }

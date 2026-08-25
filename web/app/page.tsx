@@ -1,58 +1,29 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import {
-  BadgeCheck,
-  BookOpen,
-  Car,
-  ChefHat,
-  Laptop,
-  MessageSquare,
-  Package,
-  Search,
-  ShieldCheck,
-  Shirt,
-  Sofa,
-  Wrench,
-  type LucideIcon,
-} from 'lucide-react';
+import Image from 'next/image';
+import { ArrowDownRight, ArrowRight, Search } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Listing, Category } from '@/types';
 import { ListingCard } from '@/components/ListingCard';
-import { Spinner } from '@/components/ui/Spinner';
+import { Carousel } from '@/components/Carousel';
+import { Reveal } from '@/components/Reveal';
 import { Button } from '@/components/ui/Button';
+import { Spinner } from '@/components/ui/Spinner';
 import { Alert } from '@/components/ui/Alert';
-import { ListingCardSkeleton } from '@/components/ui/Skeleton';
 
 const FALLBACK_CATEGORIES = [
-  { id: 'Electronics', name: 'Electronics' },
-  { id: 'Clothing', name: 'Clothing' },
-  { id: 'Furniture', name: 'Furniture' },
-  { id: 'Books', name: 'Books' },
-  { id: 'Vehicles', name: 'Vehicles' },
-  { id: 'Kitchen', name: 'Kitchen' },
-  { id: 'Tools', name: 'Tools' },
-  { id: 'Other', name: 'Other' },
-];
-
-const CATEGORY_ICONS: Record<string, LucideIcon> = {
-  electronics: Laptop,
-  clothing: Shirt,
-  furniture: Sofa,
-  books: BookOpen,
-  vehicles: Car,
-  kitchen: ChefHat,
-  tools: Wrench,
-  other: Package,
-};
-
-const TRUST_ITEMS = [
-  { icon: ShieldCheck, label: 'Secure checkout' },
-  { icon: BadgeCheck, label: 'Verified sellers' },
-  { icon: MessageSquare, label: 'Direct messaging' },
-];
+  'Electronics',
+  'Clothing',
+  'Furniture',
+  'Books',
+  'Vehicles',
+  'Kitchen',
+  'Tools',
+  'Other',
+].map((name) => ({ id: name, name }));
 
 export default function HomePage() {
   const router = useRouter();
@@ -64,7 +35,7 @@ export default function HomePage() {
 
   useEffect(() => {
     Promise.all([
-      api<{ items: Listing[] }>('/api/listings?limit=6&sort=newest'),
+      api<{ items: Listing[] }>('/api/listings?limit=12&sort=newest'),
       api<Category[]>('/api/listings/categories'),
     ])
       .then(([listRes, catRes]) => {
@@ -81,123 +52,267 @@ export default function HomePage() {
     router.push(q ? `/listings?query=${encodeURIComponent(q)}` : '/listings');
   }
 
-  const categoryList = categories.length ? categories : FALLBACK_CATEGORIES;
+  const heroListing = listings[0];
+  const featured = listings.slice(0, 3);
+  const trending = listings.slice(0, 8);
+  const arrivals = listings.slice(3, 9);
+  const cats = categories.length ? categories : FALLBACK_CATEGORIES;
+
+  const heroImage = useMemo(() => {
+    return heroListing?.primary_image || heroListing?.images?.[0] || null;
+  }, [heroListing]);
 
   return (
-    <div className="space-y-12 sm:space-y-14">
-      <section className="rounded-xl border border-border bg-brand-600 px-5 py-12 text-white sm:px-10 sm:py-16">
-        <div className="mx-auto max-w-2xl space-y-5 text-center">
-          <p className="text-xs font-semibold uppercase tracking-wider text-brand-100">
-            Ethiopia&apos;s marketplace
-          </p>
-          <h1 className="notranslate font-display text-4xl font-bold tracking-tight sm:text-5xl">
-            SuqET
+    <div className="bg-paper">
+      {/* ── Cinematic hero ── */}
+      <section className="relative min-h-[100svh] overflow-hidden bg-ink text-white">
+        <div className="absolute inset-0">
+          {heroImage ? (
+            <Image
+              src={heroImage}
+              alt=""
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover opacity-55"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_20%,#44403c,transparent_50%),radial-gradient(ellipse_at_80%_10%,#a1620733,transparent_40%),linear-gradient(160deg,#0c0a09,#1c1917_55%,#292524)]" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-b from-ink/55 via-ink/35 to-ink/90" />
+        </div>
+
+        <div className="page-shell relative z-10 flex min-h-[100svh] flex-col justify-end pb-16 pt-28 sm:pb-24 sm:pt-32">
+          <p className="eyebrow animate-fade-up text-white/60">Ethiopia · Second-hand · Editorial</p>
+          <h1 className="mt-4 max-w-5xl font-display text-hero font-medium animate-fade-up [animation-delay:80ms]">
+            The market,
+            <br />
+            reimagined.
           </h1>
-          <p className="text-balance text-base leading-relaxed text-brand-50 sm:text-lg">
-            Find second-hand goods nearby, message sellers, and check out securely.
+          <p className="mt-6 max-w-xl text-base leading-relaxed text-white/70 animate-fade-up sm:text-lg [animation-delay:140ms]">
+            Discover considered objects from local sellers — message directly, buy with secure
+            checkout, and sell what no longer fits your life.
           </p>
-          <form onSubmit={onSearch} className="flex flex-col gap-2 sm:flex-row">
+
+          <form
+            onSubmit={onSearch}
+            className="mt-8 flex w-full max-w-xl flex-col gap-3 animate-fade-up sm:flex-row [animation-delay:200ms]"
+          >
             <label htmlFor="home-search" className="sr-only">
               Search listings
             </label>
             <div className="relative flex-1">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                aria-hidden
-              />
+              <Search className="pointer-events-none absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" aria-hidden />
               <input
                 id="home-search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search phones, furniture, bikes…"
-                className="w-full rounded-lg border-0 bg-white py-3 pl-10 pr-4 text-ink outline-none ring-2 ring-transparent placeholder:text-muted focus:ring-accent-500"
+                className="w-full border-0 border-b border-white/35 bg-transparent py-3 pl-7 pr-3 text-white outline-none placeholder:text-white/45 focus:border-accent-400"
               />
             </div>
-            <Button type="submit" variant="secondary" className="shrink-0 px-8 py-3 text-base">
+            <Button type="submit" variant="secondary" className="shrink-0">
               Search
             </Button>
           </form>
+
+          <div className="mt-10 flex flex-wrap items-center gap-6 text-xs uppercase tracking-[0.18em] text-white/50 animate-fade-up [animation-delay:260ms]">
+            <Link href="/listings" className="inline-flex items-center gap-2 hover:text-white">
+              Enter the shop <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <Link href="/auth/register" className="inline-flex items-center gap-2 hover:text-white">
+              Start selling <ArrowDownRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
         </div>
       </section>
 
-      <div className="flex flex-wrap justify-center gap-x-8 gap-y-3">
-        {TRUST_ITEMS.map((t) => (
-          <div key={t.label} className="flex items-center gap-2 text-sm text-muted">
-            <t.icon className="h-4 w-4 text-brand-600" aria-hidden strokeWidth={2} />
-            <span>{t.label}</span>
-          </div>
-        ))}
-      </div>
+      {error && (
+        <div className="page-shell pt-8">
+          <Alert tone="error">{error}</Alert>
+        </div>
+      )}
 
-      <section className="space-y-5">
-        <h2 className="section-title">Browse categories</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {categoryList.map((cat) => {
-            const Icon = CATEGORY_ICONS[cat.name.toLowerCase()] ?? Package;
-            return (
+      {/* ── Categories carousel ── */}
+      <section className="section-pad border-b border-border">
+        <div className="page-shell">
+          <Reveal>
+            <div className="mb-8 flex items-end justify-between gap-4">
+              <div>
+                <p className="eyebrow">Browse</p>
+                <h2 className="mt-2 font-display text-display font-medium">Categories</h2>
+              </div>
+              <Link href="/listings" className="hidden text-xs font-semibold uppercase tracking-[0.16em] text-muted hover:text-ink sm:inline">
+                View all
+              </Link>
+            </div>
+          </Reveal>
+          <Carousel label="Categories">
+            {cats.map((cat, i) => (
               <Link
                 key={cat.id}
                 href={`/listings?category_id=${cat.id}`}
-                className="group flex cursor-pointer flex-col items-center gap-2.5 rounded-xl border border-border bg-surface px-3 py-5 text-center transition duration-180 hover:border-brand-300 hover:bg-brand-50"
+                className="group relative block min-w-[70vw] snap-start overflow-hidden bg-ink sm:min-w-[18rem]"
               >
-                <span
-                  className="flex h-11 w-11 items-center justify-center rounded-lg bg-brand-50 text-brand-600 transition group-hover:bg-brand-100"
-                  aria-hidden
-                >
-                  <Icon className="h-5 w-5" strokeWidth={1.75} />
-                </span>
-                <span className="text-sm font-semibold text-ink">{cat.name}</span>
+                <div className="aspect-[4/5] bg-gradient-to-br from-stone-700 to-ink transition duration-700 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/20 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-5">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-white/50">0{i + 1}</p>
+                  <p className="mt-1 font-display text-2xl text-white sm:text-3xl">{cat.name}</p>
+                </div>
               </Link>
-            );
-          })}
+            ))}
+          </Carousel>
         </div>
       </section>
 
-      <section className="space-y-5">
-        <div className="flex items-end justify-between gap-3">
-          <h2 className="section-title">Featured listings</h2>
-          <Link
-            href="/listings"
-            className="cursor-pointer text-sm font-medium text-brand-600 transition hover:text-brand-700 hover:underline"
-          >
-            View all
-          </Link>
+      {/* ── Featured editorial ── */}
+      <section className="section-pad">
+        <div className="page-shell">
+          <Reveal>
+            <div className="mb-10 max-w-2xl">
+              <p className="eyebrow">Featured collection</p>
+              <h2 className="mt-2 font-display text-display font-medium">Objects with a story</h2>
+              <p className="mt-3 text-sm leading-relaxed text-muted sm:text-base">
+                A curated cut of what&apos;s live on SuqET right now — larger pieces first, then supporting finds.
+              </p>
+            </div>
+          </Reveal>
+
+          {loading && (
+            <div className="flex justify-center py-20">
+              <Spinner />
+            </div>
+          )}
+
+          {!loading && featured.length > 0 && (
+            <div className="grid gap-4 lg:grid-cols-12 lg:gap-6">
+              <Reveal className="lg:col-span-7" delayMs={40}>
+                {featured[0] && <ListingCard listing={featured[0]} priority size="featured" />}
+              </Reveal>
+              <div className="grid gap-4 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-1 lg:gap-6">
+                {featured.slice(1, 3).map((l, i) => (
+                  <Reveal key={l.id} delayMs={80 + i * 60}>
+                    <ListingCard listing={l} />
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!loading && featured.length === 0 && !error && (
+            <p className="border border-dashed border-border px-6 py-16 text-center text-sm text-muted">
+              No listings yet.{' '}
+              <Link href="/auth/register" className="underline underline-offset-4">
+                Be the first to list
+              </Link>
+              .
+            </p>
+          )}
         </div>
-        {loading && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <ListingCardSkeleton key={i} />
-            ))}
-          </div>
-        )}
-        {error && <Alert tone="error">{error}</Alert>}
-        {!loading && !error && listings.length === 0 && (
-          <p className="rounded-xl border border-dashed border-border bg-surface px-4 py-10 text-center text-sm text-muted">
-            No listings yet. Be the first to{' '}
-            <Link href="/auth/register" className="font-medium text-brand-600 hover:underline">
-              list an item
-            </Link>
-            .
-          </p>
-        )}
-        {!loading && !error && listings.length > 0 && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {listings.map((l) => (
-              <ListingCard key={l.id} listing={l} />
-            ))}
-          </div>
-        )}
       </section>
 
-      <section className="rounded-xl border border-border bg-surface px-5 py-8 text-center sm:px-8">
-        <h2 className="section-title">Sell what you no longer need</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-          Create a listing in minutes, chat with buyers, and get paid through secure checkout.
-        </p>
-        <div className="mt-5">
-          <Link href="/auth/register">
-            <Button>Start selling</Button>
-          </Link>
+      {/* ── Trending carousel ── */}
+      {trending.length > 0 && (
+        <section className="section-pad border-y border-border bg-stone-100/80">
+          <div className="page-shell">
+            <Reveal>
+              <div className="mb-2 flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <p className="eyebrow">Trending</p>
+                  <h2 className="mt-2 font-display text-display font-medium">In motion</h2>
+                </div>
+                <Link
+                  href="/listings"
+                  className="text-xs font-semibold uppercase tracking-[0.16em] text-muted hover:text-ink"
+                >
+                  Shop all
+                </Link>
+              </div>
+            </Reveal>
+            <Carousel label="Trending listings">
+              {trending.map((l) => (
+                <div key={l.id} className="min-w-[72vw] sm:min-w-[16rem] lg:min-w-[18rem]">
+                  <ListingCard listing={l} size="compact" />
+                </div>
+              ))}
+            </Carousel>
+          </div>
+        </section>
+      )}
+
+      {/* ── Immersive sell CTA ── */}
+      <section className="relative overflow-hidden">
+        <div className="grid lg:grid-cols-2">
+          <div className="relative min-h-[22rem] bg-stone-300 lg:min-h-[32rem]">
+            {listings[1]?.primary_image || listings[1]?.images?.[0] ? (
+              <Image
+                src={(listings[1].primary_image || listings[1].images[0]) as string}
+                alt=""
+                fill
+                className="object-cover"
+                sizes="(max-width:1024px) 100vw, 50vw"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-stone-400 to-stone-700" />
+            )}
+          </div>
+          <div className="flex flex-col justify-center bg-paper px-6 py-16 sm:px-12 lg:px-16">
+            <Reveal>
+              <p className="eyebrow">For sellers</p>
+              <h2 className="mt-3 font-display text-display font-medium">Turn unused into opportunity</h2>
+              <p className="mt-4 max-w-md text-sm leading-relaxed text-muted sm:text-base">
+                List in minutes, chat with buyers in-app, and settle through secure checkout — built for how Ethiopia trades.
+              </p>
+              <div className="mt-8">
+                <Link href="/auth/register">
+                  <Button>Start selling</Button>
+                </Link>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ── New arrivals grid ── */}
+      {arrivals.length > 0 && (
+        <section className="section-pad">
+          <div className="page-shell">
+            <Reveal>
+              <div className="mb-10 flex items-end justify-between gap-4">
+                <div>
+                  <p className="eyebrow">Just listed</p>
+                  <h2 className="mt-2 font-display text-display font-medium">New arrivals</h2>
+                </div>
+                <Link href="/listings?sort=newest" className="text-xs font-semibold uppercase tracking-[0.16em] text-muted hover:text-ink">
+                  View all
+                </Link>
+              </div>
+            </Reveal>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
+              {arrivals.map((l, i) => (
+                <Reveal key={l.id} delayMs={i * 40}>
+                  <ListingCard listing={l} />
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Trust strip ── */}
+      <section className="border-t border-border">
+        <div className="page-shell grid gap-8 py-14 sm:grid-cols-3 sm:py-16">
+          {[
+            { t: 'Secure checkout', d: 'Pay through SuqET with order status tracked in the app.' },
+            { t: 'Verified sellers', d: 'KYC-reviewed sellers earn a verified mark buyers can trust.' },
+            { t: 'Direct messaging', d: 'Talk condition, meetup, and offers without leaving the listing.' },
+          ].map((item, i) => (
+            <Reveal key={item.t} delayMs={i * 70}>
+              <p className="font-display text-2xl font-medium">{item.t}</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{item.d}</p>
+            </Reveal>
+          ))}
         </div>
       </section>
     </div>

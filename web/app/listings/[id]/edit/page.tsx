@@ -98,23 +98,25 @@ export default function EditListingPage() {
 
   if (isLoading || !user || loading) {
     return (
-      <div className="flex justify-center py-16" aria-busy="true" aria-label="Loading editor">
+      <div
+        className="page-shell flex justify-center pt-24 sm:pt-28 pb-16"
+        aria-busy="true"
+        aria-label="Loading editor"
+      >
         <Spinner />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="page-shell mx-auto max-w-xl space-y-8 pt-24 sm:pt-28 pb-16">
       <div>
-        <h1 className="page-title">Edit listing</h1>
-        <p className="muted mt-1">Changes are saved to the live database.</p>
+        <p className="eyebrow">Edit</p>
+        <h1 className="mt-3 font-display text-display font-medium text-ink">Edit listing</h1>
+        <p className="mt-3 text-sm text-muted">Changes are saved to the live database.</p>
       </div>
 
-      <form
-        onSubmit={onSubmit}
-        className="space-y-4 rounded-xl border border-border bg-surface p-4 sm:p-5"
-      >
+      <form onSubmit={onSubmit} className="space-y-4 border border-border bg-surface p-5">
         <Input
           id="edit-title"
           label="Title"
@@ -132,7 +134,10 @@ export default function EditListingPage() {
           className="min-h-[100px]"
         />
         <div className="space-y-1.5">
-          <label htmlFor="edit-category" className="block text-sm font-medium text-ink">
+          <label
+            htmlFor="edit-category"
+            className="block text-xs font-semibold uppercase tracking-[0.14em] text-muted"
+          >
             Category
           </label>
           <select
@@ -151,7 +156,10 @@ export default function EditListingPage() {
           </select>
         </div>
         <div className="space-y-1.5">
-          <label htmlFor="edit-condition" className="block text-sm font-medium text-ink">
+          <label
+            htmlFor="edit-condition"
+            className="block text-xs font-semibold uppercase tracking-[0.14em] text-muted"
+          >
             Condition
           </label>
           <select
@@ -182,7 +190,10 @@ export default function EditListingPage() {
           required
         />
         <div className="space-y-1.5">
-          <label htmlFor="edit-status" className="block text-sm font-medium text-ink">
+          <label
+            htmlFor="edit-status"
+            className="block text-xs font-semibold uppercase tracking-[0.14em] text-muted"
+          >
             Status
           </label>
           <select

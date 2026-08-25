@@ -23,17 +23,17 @@ export default function InboxThreadPage({
 
   if (isLoading || !user) {
     return (
-      <div className="flex justify-center py-16">
+      <div className="page-shell flex justify-center pt-24 sm:pt-28 pb-16">
         <Spinner />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="page-shell space-y-6 pt-24 sm:pt-28 pb-16">
       <Link
         href="/inbox"
-        className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-medium text-brand-600 transition duration-180 hover:text-brand-700"
+        className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-ink transition hover:text-accent-600"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden strokeWidth={2} />
         Back to inbox

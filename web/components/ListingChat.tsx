@@ -87,16 +87,18 @@ export function ListingChat({
   }
 
   return (
-    <div className="space-y-3 rounded-xl border border-border bg-surface p-4">
-      <h2 className="font-display text-lg font-semibold text-ink">
+    <div className="space-y-4 border border-border bg-surface p-5">
+      <h2 className="font-display text-2xl font-medium text-ink">
         {user.id === sellerId ? 'Chat with buyer' : 'Message seller'}
       </h2>
-      <div className="max-h-[min(60vh,28rem)] space-y-2 overflow-y-auto rounded-lg bg-paper p-3 text-sm">
+      <div className="max-h-[min(60vh,28rem)] space-y-2 overflow-y-auto bg-paper p-3 text-sm">
         {thread.map((m) => (
           <p
             key={m.id}
-            className={`max-w-[90%] rounded-lg px-3 py-2 ${
-              m.sender_id === user.id ? 'ml-auto bg-brand-600 text-white' : 'border border-border bg-surface text-ink'
+            className={`max-w-[90%] px-3 py-2 ${
+              m.sender_id === user.id
+                ? 'ml-auto bg-ink text-white'
+                : 'border border-border bg-surface text-ink'
             }`}
           >
             {m.content}

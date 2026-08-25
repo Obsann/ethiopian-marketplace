@@ -73,7 +73,7 @@ export default function SellPage() {
 
   if (isLoading || !user) {
     return (
-      <div className="flex justify-center py-16" aria-busy="true" aria-label="Loading">
+      <div className="page-shell flex justify-center pt-24 sm:pt-28 pb-16" aria-busy="true" aria-label="Loading">
         <Spinner />
       </div>
     );
@@ -82,28 +82,27 @@ export default function SellPage() {
   const categoryName = categories.find((c) => c.id === form.category_id)?.name;
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="page-shell mx-auto max-w-xl space-y-8 pt-24 sm:pt-28 pb-16">
       <div>
-        <h1 className="page-title">Sell an item</h1>
-        <p className="muted mt-1">
+        <p className="eyebrow">List</p>
+        <h1 className="mt-3 font-display text-display font-medium text-ink">Sell an item</h1>
+        <p className="mt-3 text-sm text-muted">
           Step {step} of 3 — {STEP_LABELS[step - 1]}
         </p>
-        <div className="mt-4 flex gap-2" role="list" aria-label="Progress">
+        <div className="mt-5 flex gap-2" role="list" aria-label="Progress">
           {[1, 2, 3].map((s) => (
             <div
               key={s}
               role="listitem"
               aria-current={s === step ? 'step' : undefined}
-              className={`h-1.5 flex-1 rounded-full transition duration-180 ${
-                s <= step ? 'bg-brand-600' : 'bg-slate-200'
-              }`}
+              className={`h-1 flex-1 transition ${s <= step ? 'bg-ink' : 'bg-border'}`}
             />
           ))}
         </div>
       </div>
 
       {step === 1 && (
-        <div className="space-y-4 rounded-xl border border-border bg-surface p-4 sm:p-5">
+        <div className="space-y-4 border border-border bg-surface p-5">
           <Input
             id="sell-title"
             label="Title"
@@ -121,7 +120,10 @@ export default function SellPage() {
             className="min-h-[100px]"
           />
           <div className="space-y-1.5">
-            <label htmlFor="sell-category" className="block text-sm font-medium text-ink">
+            <label
+              htmlFor="sell-category"
+              className="block text-xs font-semibold uppercase tracking-[0.14em] text-muted"
+            >
               Category
             </label>
             <select
@@ -140,7 +142,10 @@ export default function SellPage() {
             </select>
           </div>
           <div className="space-y-1.5">
-            <label htmlFor="sell-condition" className="block text-sm font-medium text-ink">
+            <label
+              htmlFor="sell-condition"
+              className="block text-xs font-semibold uppercase tracking-[0.14em] text-muted"
+            >
               Condition
             </label>
             <select
@@ -189,9 +194,9 @@ export default function SellPage() {
       )}
 
       {step === 2 && (
-        <div className="space-y-4 rounded-xl border border-border bg-surface p-4 sm:p-5">
-          <label className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-brand-300 bg-brand-50/60 px-4 text-center transition duration-180 hover:border-brand-400 hover:bg-brand-50">
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface text-brand-600">
+        <div className="space-y-4 border border-border bg-surface p-5">
+          <label className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-border bg-paper px-4 text-center transition hover:border-ink hover:bg-surface">
+            <span className="flex h-10 w-10 items-center justify-center bg-ink text-white">
               <ImagePlus className="h-5 w-5" aria-hidden strokeWidth={1.75} />
             </span>
             <span className="text-sm font-medium text-ink">Drag & drop or click to upload</span>
@@ -210,7 +215,7 @@ export default function SellPage() {
               {files.map((f) => (
                 <li
                   key={f.name}
-                  className="flex items-center gap-2 rounded-lg border border-border bg-paper px-3 py-2 text-sm text-ink"
+                  className="flex items-center gap-2 border border-border bg-paper px-3 py-2 text-sm text-ink"
                 >
                   <Upload className="h-3.5 w-3.5 shrink-0 text-muted" aria-hidden strokeWidth={2} />
                   <span className="truncate">{f.name}</span>
@@ -232,11 +237,8 @@ export default function SellPage() {
       )}
 
       {step === 3 && (
-        <form
-          onSubmit={publish}
-          className="space-y-4 rounded-xl border border-border bg-surface p-4 sm:p-5"
-        >
-          <h2 className="section-title">Preview</h2>
+        <form onSubmit={publish} className="space-y-4 border border-border bg-surface p-5">
+          <h2 className="font-display text-2xl font-medium text-ink">Preview</h2>
           <dl className="space-y-3 text-sm">
             <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border pb-3">
               <dt className="text-muted">Title</dt>
@@ -244,7 +246,7 @@ export default function SellPage() {
             </div>
             <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border pb-3">
               <dt className="text-muted">Price</dt>
-              <dd className="font-bold text-accent-600">
+              <dd className="font-medium text-accent-600">
                 {Number(form.price).toLocaleString()} ETB
               </dd>
             </div>
@@ -264,9 +266,7 @@ export default function SellPage() {
             </div>
             <div className="flex flex-wrap items-start justify-between gap-2">
               <dt className="text-muted">Photos</dt>
-              <dd className="text-ink">
-                {files.length} selected
-              </dd>
+              <dd className="text-ink">{files.length} selected</dd>
             </div>
           </dl>
           {error && <Alert tone="error">{error}</Alert>}

@@ -40,17 +40,18 @@ export default function InboxPage() {
 
   if (isLoading || loading) {
     return (
-      <div className="flex justify-center py-16">
+      <div className="page-shell flex justify-center pt-24 sm:pt-28 pb-16">
         <Spinner />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="page-shell mx-auto max-w-xl space-y-8 pt-24 sm:pt-28 pb-16">
       <div>
-        <h1 className="font-display text-3xl font-semibold text-ink">Messages</h1>
-        <p className="mt-1 text-sm text-muted">Reply to buyers and sellers in one place.</p>
+        <p className="eyebrow">Messages</p>
+        <h1 className="mt-3 font-display text-display font-medium text-ink">Messages</h1>
+        <p className="mt-3 text-sm text-muted">Reply to buyers and sellers in one place.</p>
       </div>
       {error && <Alert tone="error">{error}</Alert>}
       {items.length === 0 && !error ? (
@@ -67,14 +68,14 @@ export default function InboxPage() {
             <li key={`${c.listing_id}:${c.other_user.id}`}>
               <Link
                 href={`/chat/${c.listing_id}?with=${c.other_user.id}`}
-                className="block cursor-pointer rounded-xl border border-border bg-surface px-4 py-3 transition duration-180 hover:border-brand-300"
+                className="block border border-border bg-surface px-5 py-4 transition hover:bg-paper"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-semibold text-ink">
+                  <p className="font-medium text-ink">
                     {c.other_user.name}
                     {c.unread && (
                       <span
-                        className="ml-2 inline-block h-2 w-2 rounded-full bg-danger-600 align-middle"
+                        className="ml-2 inline-block h-2 w-2 bg-accent-600 align-middle"
                         aria-label="Unread"
                       />
                     )}

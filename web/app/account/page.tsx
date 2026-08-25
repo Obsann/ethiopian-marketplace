@@ -51,49 +51,51 @@ export default function AccountPage() {
 
   if (isLoading || !user) {
     return (
-      <div className="flex justify-center py-16">
-        <Spinner />
+      <div className="page-shell pt-24 sm:pt-28 pb-16">
+        <div className="flex justify-center py-16">
+          <Spinner />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
-      <div>
-        <h1 className="page-title">Account</h1>
-        <p className="mt-1 text-sm text-muted">
-          Update your name and phone. Google accounts can add a phone here.
-        </p>
+    <div className="page-shell pt-24 sm:pt-28 pb-16">
+      <div className="mx-auto max-w-md space-y-8">
+        <div>
+          <p className="eyebrow">Profile</p>
+          <h1 className="mt-3 font-display text-4xl font-medium text-ink">Account</h1>
+          <p className="mt-2 text-sm text-muted">
+            Update your name and phone. Google accounts can add a phone here.
+          </p>
+        </div>
+        <form onSubmit={onSubmit} className="space-y-4 border border-border bg-surface p-6 sm:p-8">
+          <Input id="account-email" label="Email" name="email" value={user.email} disabled />
+          <Input
+            id="account-name"
+            label="Full name"
+            name="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            autoComplete="name"
+          />
+          <Input
+            id="account-phone"
+            label="Phone"
+            name="phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+2519…"
+            autoComplete="tel"
+          />
+          {error && <Alert tone="error">{error}</Alert>}
+          {ok && <Alert tone="success">{ok}</Alert>}
+          <Button type="submit" variant="primary" className="w-full" loading={busy}>
+            Save
+          </Button>
+        </form>
       </div>
-      <form
-        onSubmit={onSubmit}
-        className="space-y-4 rounded-xl border border-border bg-surface p-5"
-      >
-        <Input id="account-email" label="Email" name="email" value={user.email} disabled />
-        <Input
-          id="account-name"
-          label="Full name"
-          name="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          autoComplete="name"
-        />
-        <Input
-          id="account-phone"
-          label="Phone"
-          name="phone"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder="+2519…"
-          autoComplete="tel"
-        />
-        {error && <Alert tone="error">{error}</Alert>}
-        {ok && <Alert tone="success">{ok}</Alert>}
-        <Button type="submit" variant="primary" className="w-full" loading={busy}>
-          Save
-        </Button>
-      </form>
     </div>
   );
 }

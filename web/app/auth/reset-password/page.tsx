@@ -48,15 +48,13 @@ function ResetForm() {
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
+    <div className="mx-auto max-w-md space-y-8">
       <div>
-        <h1 className="page-title">Set a new password</h1>
-        <p className="mt-1 text-sm text-muted">Choose a password for your SuqET account.</p>
+        <p className="eyebrow">Account</p>
+        <h1 className="mt-3 font-display text-4xl font-medium text-ink">Set a new password</h1>
+        <p className="mt-2 text-sm text-muted">Choose a password for your SuqET account.</p>
       </div>
-      <form
-        onSubmit={onSubmit}
-        className="space-y-4 rounded-xl border border-border bg-surface p-5"
-      >
+      <form onSubmit={onSubmit} className="space-y-4 border border-border bg-surface p-6 sm:p-8">
         <Input
           id="reset-password"
           label="New password"
@@ -91,7 +89,7 @@ function ResetForm() {
       <p className="text-center text-sm text-muted">
         <Link
           href="/auth/forgot-password"
-          className="cursor-pointer text-brand-600 hover:underline"
+          className="cursor-pointer font-medium text-accent-600 transition hover:text-accent-700"
         >
           Request a new link
         </Link>
@@ -102,14 +100,16 @@ function ResetForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex justify-center py-16">
-          <Spinner />
-        </div>
-      }
-    >
-      <ResetForm />
-    </Suspense>
+    <div className="page-shell pt-24 sm:pt-28 pb-16">
+      <Suspense
+        fallback={
+          <div className="flex justify-center py-16">
+            <Spinner />
+          </div>
+        }
+      >
+        <ResetForm />
+      </Suspense>
+    </div>
   );
 }

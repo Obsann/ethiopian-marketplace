@@ -62,20 +62,13 @@ function KycThumb({ path, token, alt }: { path: string; token: string; alt: stri
 
   if (!src) {
     return (
-      <div
-        className="h-40 w-40 animate-pulse rounded-lg border border-border bg-paper"
-        aria-hidden
-      />
+      <div className="h-40 w-40 animate-pulse border border-border bg-paper" aria-hidden />
     );
   }
   return (
     // Private KYC blobs cannot use next/image public URLs.
     // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt={alt}
-      className="h-40 w-40 rounded-lg border border-border object-cover"
-    />
+    <img src={src} alt={alt} className="h-40 w-40 border border-border object-cover" />
   );
 }
 
@@ -145,104 +138,111 @@ export default function AdminPage() {
 
   if (isLoading || !isAdmin || loading) {
     return (
-      <div className="flex justify-center py-16">
+      <div className="page-shell flex justify-center pt-24 sm:pt-28 pb-16">
         <Spinner />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-3xl font-semibold text-ink">Admin panel</h1>
-        <p className="mt-1 text-sm text-muted">Review reports and seller verifications</p>
+    <div>
+      <section className="border-b border-border bg-ink text-white">
+        <div className="page-shell pt-24 sm:pt-28 pb-10 sm:pb-12">
+          <p className="eyebrow text-white/45">Moderation</p>
+          <h1 className="mt-3 font-display text-display font-medium">Admin</h1>
+          <p className="mt-3 max-w-lg text-sm text-white/60">
+            Review reports and seller verifications
+          </p>
+        </div>
+      </section>
+
+      <div className="page-shell space-y-8 py-10 pb-16">
+        <div className="flex flex-wrap gap-2">
+          <Button variant={tab === 'reports' ? 'primary' : 'outline'} onClick={() => setTab('reports')}>
+            Open reports
+          </Button>
+          <Button
+            variant={tab === 'verifications' ? 'primary' : 'outline'}
+            onClick={() => setTab('verifications')}
+          >
+            Pending verifications
+          </Button>
+        </div>
+
+        {error && <Alert tone="error">{error}</Alert>}
+
+        {tab === 'reports' &&
+          (reports.length === 0 ? (
+            <EmptyState
+              icon={Flag}
+              title="No open reports"
+              description="Flagged listings and users will appear here for review."
+            />
+          ) : (
+            <ul className="space-y-3">
+              {reports.map((r) => (
+                <li key={r.id} className="border border-border bg-surface p-5">
+                  <p className="text-sm font-medium text-ink">
+                    {r.target_type === 'listing' && r.target?.id ? (
+                      <Link
+                        href={`/listings/${r.target.id}`}
+                        className="transition hover:underline"
+                      >
+                        Listing: {r.target.title || r.target_id}
+                      </Link>
+                    ) : (
+                      <span>
+                        {r.target_type}: {r.target?.name || r.target_id}
+                      </span>
+                    )}
+                    <span className="font-normal text-muted"> · reported by {r.reporter.name}</span>
+                  </p>
+                  <p className="mt-2 text-sm text-muted">{r.reason}</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button onClick={() => patchReport(r.id, 'resolved')}>Resolve</Button>
+                    <Button variant="ghost" onClick={() => patchReport(r.id, 'dismissed')}>
+                      Dismiss
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ))}
+
+        {tab === 'verifications' &&
+          (verifications.length === 0 ? (
+            <EmptyState
+              icon={ShieldCheck}
+              title="No pending verifications"
+              description="Seller KYC submissions awaiting review will show up here."
+            />
+          ) : (
+            <ul className="space-y-3">
+              {verifications.map((v) => (
+                <li key={v.id} className="border border-border bg-surface p-5">
+                  <p className="font-medium text-ink">
+                    {v.user.name}{' '}
+                    <span className="font-normal text-muted">· {v.user.email}</span>
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    {token && (
+                      <>
+                        <KycThumb path={v.id_image_url} token={token} alt="ID document" />
+                        <KycThumb path={v.face_image_url} token={token} alt="Face photo" />
+                      </>
+                    )}
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button onClick={() => reviewVerification(v.id, 'approved')}>Approve</Button>
+                    <Button variant="danger" onClick={() => reviewVerification(v.id, 'rejected')}>
+                      Reject
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ))}
       </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Button variant={tab === 'reports' ? 'primary' : 'ghost'} onClick={() => setTab('reports')}>
-          Open reports
-        </Button>
-        <Button
-          variant={tab === 'verifications' ? 'primary' : 'ghost'}
-          onClick={() => setTab('verifications')}
-        >
-          Pending verifications
-        </Button>
-      </div>
-
-      {error && <Alert tone="error">{error}</Alert>}
-
-      {tab === 'reports' &&
-        (reports.length === 0 ? (
-          <EmptyState
-            icon={Flag}
-            title="No open reports"
-            description="Flagged listings and users will appear here for review."
-          />
-        ) : (
-          <ul className="space-y-3">
-            {reports.map((r) => (
-              <li key={r.id} className="rounded-xl border border-border bg-surface p-4">
-                <p className="text-sm font-medium text-ink">
-                  {r.target_type === 'listing' && r.target?.id ? (
-                    <Link
-                      href={`/listings/${r.target.id}`}
-                      className="cursor-pointer transition duration-180 hover:text-brand-600"
-                    >
-                      Listing: {r.target.title || r.target_id}
-                    </Link>
-                  ) : (
-                    <span>
-                      {r.target_type}: {r.target?.name || r.target_id}
-                    </span>
-                  )}
-                  <span className="font-normal text-muted"> · reported by {r.reporter.name}</span>
-                </p>
-                <p className="mt-1 text-sm text-muted">{r.reason}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button onClick={() => patchReport(r.id, 'resolved')}>Resolve</Button>
-                  <Button variant="ghost" onClick={() => patchReport(r.id, 'dismissed')}>
-                    Dismiss
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ))}
-
-      {tab === 'verifications' &&
-        (verifications.length === 0 ? (
-          <EmptyState
-            icon={ShieldCheck}
-            title="No pending verifications"
-            description="Seller KYC submissions awaiting review will show up here."
-          />
-        ) : (
-          <ul className="space-y-3">
-            {verifications.map((v) => (
-              <li key={v.id} className="rounded-xl border border-border bg-surface p-4">
-                <p className="font-medium text-ink">
-                  {v.user.name}{' '}
-                  <span className="font-normal text-muted">· {v.user.email}</span>
-                </p>
-                <div className="mt-3 flex flex-wrap gap-3">
-                  {token && (
-                    <>
-                      <KycThumb path={v.id_image_url} token={token} alt="ID document" />
-                      <KycThumb path={v.face_image_url} token={token} alt="Face photo" />
-                    </>
-                  )}
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button onClick={() => reviewVerification(v.id, 'approved')}>Approve</Button>
-                  <Button variant="danger" onClick={() => reviewVerification(v.id, 'rejected')}>
-                    Reject
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ))}
     </div>
   );
 }

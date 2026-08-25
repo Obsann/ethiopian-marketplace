@@ -4,23 +4,16 @@ import { FormEvent, Suspense, useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { BadgeCheck, Flag, MapPin, MessageCircle, Pencil, ShoppingBag, Tag } from 'lucide-react';
+import { BadgeCheck, ChevronLeft, Flag, MapPin, MessageCircle, Pencil, ShoppingBag, Tag } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Listing } from '@/types';
-import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { Alert } from '@/components/ui/Alert';
 import { ListingChat } from '@/components/ListingChat';
-
-const conditionTone: Record<string, 'green' | 'amber' | 'gray' | 'blue'> = {
-  new: 'green',
-  like_new: 'green',
-  good: 'amber',
-  fair: 'gray',
-};
+import { Reveal } from '@/components/Reveal';
 
 function ListingDetail() {
   const { id } = useParams<{ id: string }>();
@@ -106,14 +99,18 @@ function ListingDetail() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20" aria-busy="true" aria-label="Loading listing">
+      <div className="flex min-h-[60vh] items-center justify-center" aria-busy="true">
         <Spinner />
       </div>
     );
   }
 
   if (error || !listing) {
-    return <Alert tone="error">{error || 'Listing not found'}</Alert>;
+    return (
+      <div className="page-shell py-24">
+        <Alert tone="error">{error || 'Listing not found'}</Alert>
+      </div>
+    );
   }
 
   const images = listing.images?.length ? listing.images : ['/placeholder-listing.svg'];
@@ -122,25 +119,36 @@ function ListingDetail() {
   const fromInbox = Boolean(searchParams.get('with'));
   const peerId = searchParams.get('with') || listing.seller_id;
   const showChat = Boolean(user && (listing.status === 'active' || fromInbox));
-  const noteIsSuccess =
-    note.includes('sent') || note.includes('Thanks') || note.includes('submitted');
+  const noteIsSuccess = note.includes('sent') || note.includes('Thanks') || note.includes('submitted');
 
   return (
-    <div className="space-y-8">
-      <div className="grid gap-8 lg:grid-cols-2">
-        <div className="space-y-3">
-          <div className="relative aspect-square overflow-hidden rounded-xl border border-border bg-slate-100">
-            <Image
-              src={images[activeImg]}
-              alt={listing.title}
-              fill
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              className="object-cover"
-              priority
-            />
-          </div>
+    <div className="bg-paper">
+      <div className="page-shell pt-24 sm:pt-28">
+        <Link
+          href="/listings"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-muted transition hover:text-ink"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
+          Back to shop
+        </Link>
+      </div>
+
+      <div className="page-shell grid gap-8 py-8 lg:grid-cols-12 lg:gap-12 lg:py-12">
+        <div className="lg:col-span-7">
+          <Reveal>
+            <div className="relative aspect-[4/5] overflow-hidden bg-stone-200 sm:aspect-[5/6]">
+              <Image
+                src={images[activeImg]}
+                alt={listing.title}
+                fill
+                sizes="(max-width: 1024px) 100vw, 58vw"
+                className="object-cover"
+                priority
+              />
+            </div>
+          </Reveal>
           {images.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto pb-1" role="list" aria-label="Listing photos">
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1" role="list" aria-label="Listing photos">
               {images.map((src, i) => (
                 <button
                   key={src + i}
@@ -148,132 +156,139 @@ function ListingDetail() {
                   onClick={() => setActiveImg(i)}
                   aria-label={`Show photo ${i + 1}`}
                   aria-current={i === activeImg ? 'true' : undefined}
-                  className={`relative h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded-lg border transition duration-180 ${
-                    i === activeImg ? 'border-brand-600' : 'border-border hover:border-brand-300'
+                  className={`relative h-20 w-16 shrink-0 overflow-hidden border transition sm:h-24 sm:w-20 ${
+                    i === activeImg ? 'border-ink' : 'border-transparent opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <Image src={src} alt="" fill className="object-cover" sizes="64px" />
+                  <Image src={src} alt="" fill className="object-cover" sizes="80px" />
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        <div className="space-y-5">
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge tone={conditionTone[listing.condition] || 'gray'}>
+        <div className="lg:col-span-5">
+          <div className="lg:sticky lg:top-28 lg:space-y-6">
+            <Reveal delayMs={60}>
+              <p className="eyebrow">
                 {listing.condition.replace('_', ' ')}
-              </Badge>
-              {listing.status !== 'active' && <Badge tone="gray">{listing.status}</Badge>}
-            </div>
-            <h1 className="page-title">{listing.title}</h1>
-            <p className="text-2xl font-bold tracking-tight text-accent-600">
-              {listing.price.toLocaleString()}{' '}
-              <span className="text-base font-semibold text-muted">ETB</span>
-            </p>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden strokeWidth={2} />
-                {listing.location}
-              </span>
-              {listing.seller && (
+                {listing.status !== 'active' ? ` · ${listing.status}` : ''}
+              </p>
+              <h1 className="mt-3 font-display text-4xl font-medium leading-tight tracking-tight sm:text-5xl">
+                {listing.title}
+              </h1>
+              <p className="mt-4 font-display text-3xl font-medium text-ink">
+                {listing.price.toLocaleString()}{' '}
+                <span className="text-lg font-sans font-medium text-muted">ETB</span>
+              </p>
+              <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted">
                 <span className="inline-flex items-center gap-1.5">
-                  {listing.seller.is_verified ? (
-                    <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-accent-600" aria-hidden strokeWidth={2} />
-                  ) : null}
-                  Seller: {listing.seller.name}
-                  {listing.seller.is_verified ? ' · Verified' : ''}
+                  <MapPin className="h-3.5 w-3.5" aria-hidden />
+                  {listing.location}
                 </span>
-              )}
-            </div>
-          </div>
+                {listing.seller && (
+                  <span className="inline-flex items-center gap-1.5">
+                    {listing.seller.is_verified && (
+                      <BadgeCheck className="h-3.5 w-3.5 text-accent-600" aria-hidden />
+                    )}
+                    {listing.seller.name}
+                    {listing.seller.is_verified ? ' · Verified' : ''}
+                  </span>
+                )}
+              </div>
+            </Reveal>
 
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">{listing.description}</p>
+            <Reveal delayMs={120}>
+              <p className="mt-6 whitespace-pre-wrap text-sm leading-relaxed text-ink/80 sm:text-base">
+                {listing.description}
+              </p>
+            </Reveal>
 
-          {canBuy && (
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              <Button variant="secondary" onClick={buyNow} loading={busy}>
-                <ShoppingBag className="h-4 w-4" aria-hidden strokeWidth={2} />
-                Buy Now
-              </Button>
-              <Button variant="outline" onClick={() => setOfferOpen(true)}>
-                <Tag className="h-4 w-4" aria-hidden strokeWidth={2} />
-                Make Offer
-              </Button>
-            </div>
-          )}
-
-          {isOwn && (
-            <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-muted">This is your listing.</p>
-              <Link href={`/listings/${listing.id}/edit`}>
-                <Button variant="outline" type="button">
-                  <Pencil className="h-4 w-4" aria-hidden strokeWidth={2} />
-                  Edit listing
+            {canBuy && (
+              <div className="mt-8 space-y-3 border-t border-border pt-6">
+                <Button variant="secondary" className="w-full" onClick={buyNow} loading={busy}>
+                  <ShoppingBag className="h-4 w-4" aria-hidden />
+                  Buy now
                 </Button>
-              </Link>
-            </div>
-          )}
+                <Button variant="outline" className="w-full" onClick={() => setOfferOpen(true)}>
+                  <Tag className="h-4 w-4" aria-hidden />
+                  Make an offer
+                </Button>
+              </div>
+            )}
 
-          {note && (
-            <Alert tone={noteIsSuccess ? 'success' : 'error'}>{note}</Alert>
-          )}
+            {isOwn && (
+              <div className="mt-8 flex flex-col gap-3 border border-border bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted">This is your listing.</p>
+                <Link href={`/listings/${listing.id}/edit`}>
+                  <Button variant="outline" type="button">
+                    <Pencil className="h-4 w-4" aria-hidden />
+                    Edit
+                  </Button>
+                </Link>
+              </div>
+            )}
 
-          {!isOwn && (
-            <button
-              type="button"
-              onClick={reportListing}
-              className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-muted hover:text-ink"
-            >
-              <Flag className="h-3.5 w-3.5" aria-hidden strokeWidth={2} />
-              Report listing
-            </button>
-          )}
+            {note && (
+              <div className="mt-4">
+                <Alert tone={noteIsSuccess ? 'success' : 'error'}>{note}</Alert>
+              </div>
+            )}
+
+            {!isOwn && (
+              <button
+                type="button"
+                onClick={reportListing}
+                className="mt-6 inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.14em] text-muted hover:text-ink"
+              >
+                <Flag className="h-3.5 w-3.5" aria-hidden />
+                Report
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {showChat ? (
-        <ListingChat listingId={listing.id} sellerId={listing.seller_id} peerId={peerId} />
-      ) : listing.status !== 'active' && !isOwn ? (
-        <Alert tone="info">
-          This listing is no longer available.{' '}
-          {user ? (
-            <Link href="/inbox" className="font-semibold underline">
-              Open inbox
-            </Link>
-          ) : (
-            'Sign in to see past conversations in Inbox.'
-          )}
-        </Alert>
-      ) : (
-        !isOwn && (
+      <div className="page-shell space-y-8 pb-20">
+        {showChat ? (
+          <ListingChat listingId={listing.id} sellerId={listing.seller_id} peerId={peerId} />
+        ) : listing.status !== 'active' && !isOwn ? (
           <Alert tone="info">
-            <button
-              type="button"
-              className="inline-flex cursor-pointer items-center gap-1.5 font-semibold underline"
-              onClick={() => router.push(`/auth/login?next=/listings/${id}`)}
-            >
-              <MessageCircle className="h-4 w-4" aria-hidden strokeWidth={2} />
-              Sign in
-            </button>{' '}
-            to message the seller.
+            This listing is no longer available.{' '}
+            {user ? (
+              <Link href="/inbox" className="font-semibold underline">
+                Open inbox
+              </Link>
+            ) : (
+              'Sign in to see past conversations in Inbox.'
+            )}
           </Alert>
-        )
-      )}
+        ) : (
+          !isOwn && (
+            <Alert tone="info">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 font-semibold underline"
+                onClick={() => router.push(`/auth/login?next=/listings/${id}`)}
+              >
+                <MessageCircle className="h-4 w-4" aria-hidden />
+                Sign in
+              </button>{' '}
+              to message the seller.
+            </Alert>
+          )
+        )}
+      </div>
 
       {offerOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 sm:items-center"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 p-4 sm:items-center"
           role="dialog"
           aria-modal="true"
           aria-labelledby="offer-dialog-title"
         >
-          <form
-            onSubmit={sendOffer}
-            className="w-full max-w-md space-y-4 rounded-xl border border-border bg-surface p-5"
-          >
-            <h2 id="offer-dialog-title" className="section-title">
+          <form onSubmit={sendOffer} className="w-full max-w-md space-y-4 border border-border bg-surface p-6">
+            <h2 id="offer-dialog-title" className="font-display text-2xl font-medium">
               Make an offer
             </h2>
             <Input
@@ -304,7 +319,7 @@ export default function ListingDetailPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex justify-center py-20">
+        <div className="flex min-h-[60vh] items-center justify-center">
           <Spinner />
         </div>
       }

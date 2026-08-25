@@ -2,16 +2,16 @@
 
 import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Filter, SlidersHorizontal, X } from 'lucide-react';
+import { SlidersHorizontal, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Category, Listing, Pagination } from '@/types';
 import { ListingCard } from '@/components/ListingCard';
-import { Spinner } from '@/components/ui/Spinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Alert } from '@/components/ui/Alert';
 import { ListingCardSkeleton } from '@/components/ui/Skeleton';
+import { Reveal } from '@/components/Reveal';
 
 const selectClass = 'field cursor-pointer';
 
@@ -30,15 +30,10 @@ function FilterSelect({
 }) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-medium text-ink">
+      <label htmlFor={id} className="block text-xs font-semibold uppercase tracking-[0.14em] text-muted">
         {label}
       </label>
-      <select
-        id={id}
-        className={selectClass}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
+      <select id={id} className={selectClass} value={value} onChange={(e) => onChange(e.target.value)}>
         {children}
       </select>
     </div>
@@ -71,15 +66,6 @@ function ListingsContent() {
 
   const [queryInput, setQueryInput] = useState(filters.query);
 
-  const activeFilterCount = [
-    filters.category_id,
-    filters.condition,
-    filters.min_price,
-    filters.max_price,
-    filters.location,
-    filters.sort !== 'newest' ? filters.sort : '',
-  ].filter(Boolean).length;
-
   useEffect(() => {
     setQueryInput(filters.query);
   }, [filters.query]);
@@ -101,54 +87,39 @@ function ListingsContent() {
     router.push(`/listings?${params.toString()}`);
   }
 
-  function clearFilters() {
-    const params = new URLSearchParams();
-    if (filters.query) params.set('query', filters.query);
-    router.push(params.toString() ? `/listings?${params.toString()}` : '/listings');
-  }
-
-  useEffect(() => {
-    api<Category[]>('/api/listings/categories').then((r) => setCategories(r.data)).catch(() => {});
-  }, []);
-
   useEffect(() => {
     setLoading(true);
-    setError('');
     const qs = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => {
       if (v) qs.set(k, v);
     });
-    qs.set('limit', '20');
-    api<{ items: Listing[]; pagination: Pagination }>(`/api/listings?${qs}`)
-      .then((r) => {
-        setListings(r.data.items);
-        setPagination(r.data.pagination);
+    qs.set('limit', '12');
+    Promise.all([
+      api<{ items: Listing[]; pagination: Pagination }>(`/api/listings?${qs}`),
+      api<Category[]>('/api/listings/categories'),
+    ])
+      .then(([listRes, catRes]) => {
+        setListings(listRes.data.items);
+        setPagination(listRes.data.pagination);
+        setCategories(catRes.data);
+        setError('');
       })
-      .catch((e) => setError(e.message))
+      .catch((e) => setError(e.message || 'Failed to load'))
       .finally(() => setLoading(false));
   }, [filters]);
 
   const filterPanel = (
-    <aside className="space-y-4 rounded-xl border border-border bg-surface p-4">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-          <SlidersHorizontal className="h-4 w-4 text-brand-600" aria-hidden strokeWidth={2} />
-          Filters
-        </div>
-        {activeFilterCount > 0 && (
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-muted hover:text-ink"
-          >
-            <X className="h-3.5 w-3.5" aria-hidden />
-            Clear
-          </button>
-        )}
-      </div>
-
+    <aside className="space-y-5 border border-border bg-surface p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ink">Filters</p>
+      <Input
+        id="shop-query"
+        label="Search"
+        value={queryInput}
+        onChange={(e) => setQueryInput(e.target.value)}
+        placeholder="Keyword…"
+      />
       <FilterSelect
-        id="filter-category"
+        id="shop-category"
         label="Category"
         value={filters.category_id}
         onChange={(v) => setParam('category_id', v)}
@@ -160,9 +131,8 @@ function ListingsContent() {
           </option>
         ))}
       </FilterSelect>
-
       <FilterSelect
-        id="filter-condition"
+        id="shop-condition"
         label="Condition"
         value={filters.condition}
         onChange={(v) => setParam('condition', v)}
@@ -173,146 +143,116 @@ function ListingsContent() {
         <option value="good">Good</option>
         <option value="fair">Fair</option>
       </FilterSelect>
-
+      <div className="grid grid-cols-2 gap-3">
+        <Input
+          id="min-price"
+          label="Min ETB"
+          type="number"
+          value={filters.min_price}
+          onChange={(e) => setParam('min_price', e.target.value)}
+        />
+        <Input
+          id="max-price"
+          label="Max ETB"
+          type="number"
+          value={filters.max_price}
+          onChange={(e) => setParam('max_price', e.target.value)}
+        />
+      </div>
       <Input
-        id="filter-min-price"
-        label="Min price (ETB)"
-        type="number"
-        value={filters.min_price}
-        onChange={(e) => setParam('min_price', e.target.value)}
-      />
-      <Input
-        id="filter-max-price"
-        label="Max price (ETB)"
-        type="number"
-        value={filters.max_price}
-        onChange={(e) => setParam('max_price', e.target.value)}
-      />
-      <Input
-        id="filter-location"
+        id="location"
         label="Location"
         value={filters.location}
         onChange={(e) => setParam('location', e.target.value)}
-        placeholder="Addis Ababa, Jimma…"
       />
-
-      <FilterSelect
-        id="filter-sort"
-        label="Sort"
-        value={filters.sort}
-        onChange={(v) => setParam('sort', v)}
-      >
+      <FilterSelect id="shop-sort" label="Sort" value={filters.sort} onChange={(v) => setParam('sort', v)}>
         <option value="newest">Newest</option>
-        <option value="price_asc">Price: low to high</option>
-        <option value="price_desc">Price: high to low</option>
+        <option value="price_asc">Price ↑</option>
+        <option value="price_desc">Price ↓</option>
       </FilterSelect>
     </aside>
   );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="page-title">Browse listings</h1>
-        <p className="muted mt-1">Filter by category, price, condition, and location.</p>
-      </div>
+    <div className="bg-paper">
+      <section className="border-b border-border bg-ink text-white">
+        <div className="page-shell py-20 sm:py-28">
+          <p className="eyebrow text-white/45">Shop</p>
+          <h1 className="mt-3 font-display text-hero font-medium">The collection</h1>
+          <p className="mt-4 max-w-lg text-sm text-white/60 sm:text-base">
+            Browse live listings across Ethiopia — filter by category, condition, and place.
+          </p>
+        </div>
+      </section>
 
-      <Input
-        id="listings-search"
-        label="Search"
-        value={queryInput}
-        onChange={(e) => setQueryInput(e.target.value)}
-        placeholder="e.g. phone, sofa, helmet"
-      />
-
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full lg:hidden"
-        onClick={() => setFiltersOpen((v) => !v)}
-        aria-expanded={filtersOpen}
-        aria-controls="listings-filters"
-      >
-        <Filter className="h-4 w-4" aria-hidden strokeWidth={2} />
-        {filtersOpen ? 'Hide filters' : 'Show filters'}
-        {activeFilterCount > 0 && (
-          <span className="rounded-md bg-brand-100 px-1.5 py-0.5 text-xs font-semibold text-brand-800">
-            {activeFilterCount}
-          </span>
-        )}
-      </Button>
-
-      <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-        <div
-          id="listings-filters"
-          className={filtersOpen ? 'block' : 'hidden lg:block'}
-        >
-          {filterPanel}
+      <div className="page-shell py-10 sm:py-14">
+        <div className="mb-6 flex items-center justify-between gap-3 lg:hidden">
+          <p className="text-sm text-muted">
+            {pagination ? `${pagination.total} pieces` : 'Loading…'}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="px-3 py-2"
+            onClick={() => setFiltersOpen((v) => !v)}
+          >
+            {filtersOpen ? <X className="h-4 w-4" /> : <SlidersHorizontal className="h-4 w-4" />}
+            Filters
+          </Button>
         </div>
 
-        <div className="min-w-0 space-y-4">
-          {!loading && !error && pagination && (
-            <p className="text-sm text-muted">
-              {pagination.total.toLocaleString()} result{pagination.total === 1 ? '' : 's'}
-            </p>
-          )}
-
-          {loading && (
-            <div
-              className="grid grid-cols-1 gap-4 sm:grid-cols-2"
-              aria-busy="true"
-              aria-label="Loading listings"
-            >
-              {Array.from({ length: 6 }).map((_, i) => (
-                <ListingCardSkeleton key={i} />
-              ))}
-            </div>
-          )}
-
-          {error && <Alert tone="error">{error}</Alert>}
-
-          {!loading && !error && listings.length === 0 && (
-            <EmptyState
-              title="No listings found"
-              description="Try different filters or clear your search."
-              actionHref="/"
-              actionLabel="Back home"
-            />
-          )}
-
-          {!loading && listings.length > 0 && (
-            <>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {listings.map((l) => (
-                  <ListingCard key={l.id} listing={l} />
+        <div className="grid gap-8 lg:grid-cols-12">
+          <div className={`lg:col-span-3 ${filtersOpen ? 'block' : 'hidden lg:block'}`}>
+            {filterPanel}
+          </div>
+          <div className="lg:col-span-9">
+            {error && <Alert tone="error">{error}</Alert>}
+            {loading && (
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <ListingCardSkeleton key={i} />
                 ))}
               </div>
-              {pagination && pagination.pages > 1 && (
-                <div className="flex items-center justify-center gap-3 pt-2">
-                  <Button
-                    variant="outline"
-                    disabled={pagination.page <= 1}
-                    onClick={() => setParam('page', String(pagination.page - 1))}
-                    aria-label="Previous page"
-                  >
-                    <ChevronLeft className="h-4 w-4" aria-hidden />
-                    Previous
-                  </Button>
-                  <span className="text-sm text-muted">
-                    Page {pagination.page} of {pagination.pages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    disabled={pagination.page >= pagination.pages}
-                    onClick={() => setParam('page', String(pagination.page + 1))}
-                    aria-label="Next page"
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4" aria-hidden />
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
+            )}
+            {!loading && !error && listings.length === 0 && (
+              <EmptyState
+                title="No pieces found"
+                description="Try clearing filters or search with a broader keyword."
+                actionHref="/listings"
+                actionLabel="Reset shop"
+              />
+            )}
+            {!loading && listings.length > 0 && (
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
+                {listings.map((l, i) => (
+                  <Reveal key={l.id} delayMs={(i % 6) * 40}>
+                    <ListingCard listing={l} />
+                  </Reveal>
+                ))}
+              </div>
+            )}
+            {pagination && pagination.pages > 1 && (
+              <div className="mt-10 flex items-center justify-center gap-3">
+                <Button
+                  variant="outline"
+                  disabled={Number(filters.page) <= 1}
+                  onClick={() => setParam('page', String(Number(filters.page) - 1))}
+                >
+                  Previous
+                </Button>
+                <span className="text-xs uppercase tracking-[0.14em] text-muted">
+                  {filters.page} / {pagination.pages}
+                </span>
+                <Button
+                  variant="outline"
+                  disabled={Number(filters.page) >= pagination.pages}
+                  onClick={() => setParam('page', String(Number(filters.page) + 1))}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -323,8 +263,10 @@ export default function ListingsPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex justify-center py-16">
-          <Spinner />
+        <div className="page-shell grid grid-cols-2 gap-4 py-24 md:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <ListingCardSkeleton key={i} />
+          ))}
         </div>
       }
     >

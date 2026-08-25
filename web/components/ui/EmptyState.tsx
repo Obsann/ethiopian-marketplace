@@ -16,17 +16,14 @@ export function EmptyState({
   icon?: LucideIcon;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-surface px-4 py-16 text-center">
-      <div
-        className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-50 text-brand-600"
-        aria-hidden
-      >
-        <Icon className="h-6 w-6" strokeWidth={1.75} />
+    <div className="flex flex-col items-center justify-center gap-3 border border-dashed border-border bg-surface px-4 py-20 text-center">
+      <div className="flex h-12 w-12 items-center justify-center bg-stone-100 text-ink" aria-hidden>
+        <Icon className="h-6 w-6" strokeWidth={1.5} />
       </div>
-      <h3 className="font-display text-xl font-semibold text-ink">{title}</h3>
+      <h3 className="font-display text-2xl font-medium text-ink">{title}</h3>
       <p className="max-w-sm text-sm text-muted">{description}</p>
       {actionHref && actionLabel && (
-        <Link href={actionHref} className="mt-1">
+        <Link href={actionHref} className="mt-2">
           <Button>{actionLabel}</Button>
         </Link>
       )}

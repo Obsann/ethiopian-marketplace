@@ -134,96 +134,99 @@ function ChatView() {
 
   if (isLoading || loading) {
     return (
-      <div className="flex justify-center py-20">
+      <div className="page-shell flex justify-center pt-24 sm:pt-28 pb-16">
         <Spinner />
       </div>
     );
   }
 
   if (error) {
-    return <Alert tone="error">{error}</Alert>;
+    return (
+      <div className="page-shell pt-24 sm:pt-28 pb-16">
+        <Alert tone="error">{error}</Alert>
+      </div>
+    );
   }
 
   if (user && withUserId === user.id) {
     return (
-      <Alert tone="info">
-        You cannot chat with yourself.{' '}
-        <Link href="/chat" className="font-semibold underline underline-offset-2">
-          Open your inbox
-        </Link>{' '}
-        to reply to buyers.
-      </Alert>
+      <div className="page-shell pt-24 sm:pt-28 pb-16">
+        <Alert tone="info">
+          You cannot chat with yourself.{' '}
+          <Link href="/chat" className="font-semibold underline underline-offset-2">
+            Open your inbox
+          </Link>{' '}
+          to reply to buyers.
+        </Alert>
+      </div>
     );
   }
 
   return (
-    <div className="flex h-[calc(100vh-9rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface">
-      <div className="border-b border-border px-4 py-3">
-        <h1 className="font-display text-lg font-semibold text-ink">
-          {listing ? listing.title : 'Chat'}
-        </h1>
-        <div className="mt-0.5 flex flex-wrap gap-3 text-xs">
-          {listing && (
-            <Link
-              href={`/listings/${listing.id}`}
-              className="cursor-pointer font-medium text-brand-600 transition duration-180 hover:text-brand-700"
-            >
-              View listing
-            </Link>
-          )}
-          <Link
-            href="/chat"
-            className="cursor-pointer text-muted transition duration-180 hover:text-ink"
-          >
-            All messages
-          </Link>
-        </div>
-      </div>
-
-      <div className="flex-1 space-y-3 overflow-y-auto bg-paper px-3 py-4 sm:px-4">
-        {messages.length === 0 && (
-          <EmptyState
-            icon={MessageSquare}
-            title="No messages yet"
-            description="Say hello to start the conversation."
-          />
-        )}
-        {messages.map((m) => {
-          const mine = m.sender_id === user?.id;
-          return (
-            <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                  mine
-                    ? 'bg-brand-600 text-white'
-                    : 'border border-border bg-surface text-ink'
-                }`}
+    <div className="page-shell pt-24 sm:pt-28 pb-16">
+      <div className="flex h-[calc(100vh-9rem)] flex-col overflow-hidden border border-border bg-surface">
+        <div className="border-b border-border px-4 py-4 sm:px-5">
+          <h1 className="font-display text-2xl font-medium text-ink">
+            {listing ? listing.title : 'Chat'}
+          </h1>
+          <div className="mt-2 flex flex-wrap gap-4 text-xs font-semibold uppercase tracking-[0.14em]">
+            {listing && (
+              <Link
+                href={`/listings/${listing.id}`}
+                className="text-accent-600 transition hover:text-accent-700"
               >
-                <p className="whitespace-pre-wrap break-words">{m.content}</p>
-              </div>
-            </div>
-          );
-        })}
-        <div ref={bottomRef} />
-      </div>
-
-      <form onSubmit={send} className="flex gap-2 border-t border-border bg-surface p-3">
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Type a message…"
-          aria-label="Message"
-          className="field min-w-0 flex-1"
-        />
-        <Button type="submit" disabled={!draft.trim()} loading={sending} className="shrink-0">
-          Send
-        </Button>
-      </form>
-      {sendError && (
-        <div className="px-3 pb-3">
-          <Alert tone="error">{sendError}</Alert>
+                View listing
+              </Link>
+            )}
+            <Link href="/chat" className="text-muted transition hover:text-ink">
+              All messages
+            </Link>
+          </div>
         </div>
-      )}
+
+        <div className="flex-1 space-y-3 overflow-y-auto bg-paper px-3 py-4 sm:px-5">
+          {messages.length === 0 && (
+            <EmptyState
+              icon={MessageSquare}
+              title="No messages yet"
+              description="Say hello to start the conversation."
+            />
+          )}
+          {messages.map((m) => {
+            const mine = m.sender_id === user?.id;
+            return (
+              <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={`max-w-[85%] px-3 py-2 text-sm ${
+                    mine ? 'bg-ink text-white' : 'border border-border bg-surface text-ink'
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap break-words">{m.content}</p>
+                </div>
+              </div>
+            );
+          })}
+          <div ref={bottomRef} />
+        </div>
+
+        <form onSubmit={send} className="flex gap-2 border-t border-border bg-surface p-3 sm:p-4">
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Type a message…"
+            aria-label="Message"
+            className="field min-w-0 flex-1"
+          />
+          <Button type="submit" disabled={!draft.trim()} loading={sending} className="shrink-0">
+            Send
+          </Button>
+        </form>
+        {sendError && (
+          <div className="px-3 pb-3 sm:px-4">
+            <Alert tone="error">{sendError}</Alert>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -232,7 +235,7 @@ export default function ChatPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex justify-center py-20">
+        <div className="page-shell flex justify-center pt-24 sm:pt-28 pb-16">
           <Spinner />
         </div>
       }

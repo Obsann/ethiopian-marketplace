@@ -49,16 +49,17 @@ function OAuthCallback() {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-md space-y-6">
+      <div className="mx-auto max-w-md space-y-8">
         <div>
-          <h1 className="page-title">Google sign-in</h1>
-          <p className="mt-1 text-sm text-muted">Something went wrong finishing sign-in.</p>
+          <p className="eyebrow">Account</p>
+          <h1 className="mt-3 font-display text-4xl font-medium text-ink">Google sign-in</h1>
+          <p className="mt-2 text-sm text-muted">Something went wrong finishing sign-in.</p>
         </div>
-        <div className="space-y-4 rounded-xl border border-border bg-surface p-5">
+        <div className="space-y-5 border border-border bg-surface p-6 sm:p-8">
           <Alert tone="error">{error}</Alert>
           <Link
             href="/auth/login"
-            className="inline-block cursor-pointer text-sm text-brand-600 hover:underline"
+            className="inline-block cursor-pointer text-xs font-semibold uppercase tracking-[0.16em] text-muted transition hover:text-ink"
           >
             Back to log in
           </Link>
@@ -69,7 +70,7 @@ function OAuthCallback() {
 
   return (
     <div className="mx-auto max-w-md">
-      <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-surface p-5 py-12">
+      <div className="flex flex-col items-center gap-3 border border-border bg-surface p-6 py-16 sm:p-8">
         <Spinner />
         <p className="text-sm text-muted">Finishing Google sign-in…</p>
       </div>
@@ -79,14 +80,16 @@ function OAuthCallback() {
 
 export default function OAuthPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex justify-center py-16">
-          <Spinner />
-        </div>
-      }
-    >
-      <OAuthCallback />
-    </Suspense>
+    <div className="page-shell pt-24 sm:pt-28 pb-16">
+      <Suspense
+        fallback={
+          <div className="flex justify-center py-16">
+            <Spinner />
+          </div>
+        }
+      >
+        <OAuthCallback />
+      </Suspense>
+    </div>
   );
 }
