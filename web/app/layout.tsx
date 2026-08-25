@@ -54,20 +54,31 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 return _origInsertBefore.apply(this, arguments);
               };
             }
-            window.googleTranslateElementInit = function () {
-              if (window.__gtInitialized) return;
+            function mountTranslate() {
+              if (window.__suqetTranslateInited) return true;
               var el = document.getElementById('google_translate_element');
-              if (!el || !window.google || !window.google.translate) return;
+              var TE = window.google && window.google.translate && window.google.translate.TranslateElement;
+              if (!el || typeof TE !== 'function') return false;
               if (el.childElementCount > 0) {
-                window.__gtInitialized = true;
-                return;
+                window.__suqetTranslateInited = true;
+                return true;
               }
-              new google.translate.TranslateElement({
+              new TE({
                 pageLanguage: 'en',
                 includedLanguages: 'en,am,om,ti',
                 autoDisplay: false
               }, 'google_translate_element');
-              window.__gtInitialized = true;
+              window.__suqetTranslateInited = true;
+              return true;
+            }
+            window.googleTranslateElementInit = function () {
+              if (mountTranslate()) return;
+              var tries = 0;
+              var maxTries = 40;
+              var timer = setInterval(function () {
+                tries += 1;
+                if (mountTranslate() || tries >= maxTries) clearInterval(timer);
+              }, 50);
             };
           })();
         `}</Script>

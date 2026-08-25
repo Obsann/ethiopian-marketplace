@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth';
 declare global {
   interface Window {
     googleTranslateElementInit?: () => void;
-    __gtInitialized?: boolean;
+    __suqetTranslateInited?: boolean;
     __gtDomPatched?: boolean;
     google?: {
       translate: {
@@ -28,10 +28,10 @@ const FIXED_STYLE = 'position:fixed;bottom:16px;left:16px;z-index:9999;';
 const HEADER_STYLE = 'position:static;';
 
 /**
- * Persistent Google Translate Element (MedSchedule layout).
+ * Persistent Google Translate Element.
  * Logged out → fixed bottom-left on body host.
  * Logged in → teleported into #google_translate_header_target (Navbar).
- * Init + React DOM patch live in root layout beforeInteractive Script.
+ * Init callback is defined in root layout beforeInteractive; element.js uses cb= only.
  */
 export function GoogleTranslate() {
   const { user, isLoading } = useAuth();
@@ -68,12 +68,10 @@ export function GoogleTranslate() {
           aria-label="Translate page language"
         />
       </div>
+      {/* Load once via cb= only — do not also call init from onLoad (race). */}
       <Script
         src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
         strategy="afterInteractive"
-        onLoad={() => {
-          window.googleTranslateElementInit?.();
-        }}
       />
     </>
   );
