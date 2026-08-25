@@ -9,7 +9,8 @@ This README is for **hackathon judges**: what the product is, what the demo prov
 | Submission item | Link |
 |-----------------|------|
 | GitHub repo | https://github.com/kikemal/ethiopian-marketplace |
-| Hosted demo | _add public Vercel URL after deploy_ |
+| Hosted demo | https://ethiopian-marketplace-opal.vercel.app |
+| API (Render) | https://suqet-api.onrender.com (`GET /api/health`) |
 | Video walkthrough | _add video URL before submission_ |
 
 ---
