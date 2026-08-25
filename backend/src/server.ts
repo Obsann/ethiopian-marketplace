@@ -15,6 +15,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { responseTimeLogger } from './middleware/responseTime';
 import { setupSocket } from './socket';
 import prisma from './models/prisma';
+import { getCorsOrigins } from './utils/corsOrigins';
 
 const app = express();
 const server = http.createServer(app);
@@ -38,7 +39,7 @@ app.use((_req, res, next) => {
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: getCorsOrigins(),
     credentials: true,
   })
 );

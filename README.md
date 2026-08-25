@@ -9,7 +9,7 @@ This README is for **hackathon judges**: what the product is, what the demo prov
 | Submission item | Link |
 |-----------------|------|
 | GitHub repo | https://github.com/kikemal/ethiopian-marketplace |
-| Hosted demo | _add public Render URL after deploy_ |
+| Hosted demo | _add public Vercel URL after deploy_ |
 | Video walkthrough | _add video URL before submission_ |
 
 ---
@@ -107,7 +107,7 @@ On Render, Cloudinary is strongly recommended (ephemeral disk).
 
 - **Email / password** — register, login, logout; optional forgot/reset and email verify when SMTP is configured.
 - **Google OAuth** (optional) — after Google redirects, the frontend exchanges a **one-time code** via `POST /api/auth/oauth/exchange`. The session JWT is **not** left in the URL.
-- **Session** — httpOnly cookie `etm_sid`. In production (`NODE_ENV=production`), cookie is Secure + SameSite=None so login works across separate web/API hosts.
+- **Session** — httpOnly cookie `etm_sid`. In production (`NODE_ENV=production`), cookie is `Secure` + `SameSite=None` so login works across **Vercel (web) → Render (API)** with `credentials: 'include'`.
 
 Requires `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_CALLBACK_URL` in `backend/.env` for Google sign-in.
 
@@ -156,7 +156,7 @@ No special deploy config. Assists reading the UI; it is not a full i18n string c
 - **Mobile-first** — layouts aimed at 375px width.
 - **Rate limits** — auth, payments, and write routes (`express-rate-limit`; `TRUST_PROXY` behind Render).
 - **Health** — `GET` and `POST /api/health` → `{ "success": true, ... }`.
-- **Render deploy** — root `render.yaml` Blueprint: Postgres (`suqet-db`) + API (`suqet-api`) + Next.js (`suqet-web`). Secrets only on the API service.
+- **Split deploy** — Render Blueprint: Postgres (`suqet-db`) + API (`suqet-api`) only. Next.js on **Vercel**. Secrets only on the API.
 
 ---
 
@@ -243,36 +243,88 @@ Open http://localhost:3000 → log in as Sara → open a listing → chat → Bu
 
 ---
 
-## Deploy (Render)
+## Deploy (Render API + Vercel frontend)
 
-Production target: **Render** (PostgreSQL + Express API + Next.js 14 App Router). App Router needs a **Web Service** (Node), not Static Site.
+Split hosting:
 
-`render.yaml` Blueprint resources:
+| Where | What |
+|-------|------|
+| **Render** | PostgreSQL (`suqet-db`) + Express API (`suqet-api`) |
+| **Vercel** | Next.js 14 App Router (`web/`) |
 
-| Resource | Name | Role |
-|----------|------|------|
-| Postgres | `suqet-db` | `DATABASE_URL` |
-| Web Service | `suqet-api` | Express API (`backend/`) |
-| Web Service | `suqet-web` | Next.js (`web/`) |
+`render.yaml` Blueprint deploys **Postgres + API only** — no Next.js service on Render.
 
-**API** — build: `npm install --include=dev && npm run build` · start: `npx prisma migrate deploy && node dist/server.js` · health: `GET /api/health`
-
-**Web** — build: `npm install --include=dev && npm run build` · start: `npm start` · only `NEXT_PUBLIC_API_URL` (inlined at **build** time — clear cache & redeploy after changing it)
-
-### Env checklist (names only)
-
-**`suqet-api`:** `DATABASE_URL`, `NODE_ENV`, `TRUST_PROXY`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `FRONTEND_URL`, `BACKEND_PUBLIC_URL`, `CHAPA_SECRET_KEY`, `CHAPA_WEBHOOK_SECRET`, `CHAPA_CALLBACK_URL`, optional Cloudinary / SMTP / Google OAuth.
-
-**`suqet-web`:** `NEXT_PUBLIC_API_URL` (same origin as `BACKEND_PUBLIC_URL`, no trailing slash), `NODE_ENV`.
-
-### Dashboard steps
+### 1. Render — Postgres + API
 
 1. [Render Dashboard](https://dashboard.render.com) → **New** → **Blueprint** → connect this repo → `render.yaml` on `main`.
-2. Apply Blueprint; set `FRONTEND_URL` / `BACKEND_PUBLIC_URL` / Chapa / Cloudinary after hostnames exist.
-3. Wait for Postgres + `suqet-api`. Set `NEXT_PUBLIC_API_URL` on `suqet-web` and redeploy with cleared build cache.
-4. Chapa Test webhook: `https://<suqet-api-host>/api/payments/verify`. Callback must match `CHAPA_CALLBACK_URL`.
-5. Smoke-test: `GET /api/health`, then browse/login on the web URL.
+2. Wait for `suqet-db` + `suqet-api`. Health: `GET https://<api-host>/api/health`.
+3. Set API env vars (see checklist below). After you have the Vercel URL, set `FRONTEND_URL` to that origin (no trailing slash) and redeploy the API.
 
-Do **not** commit `.env` / `.env.local`. Do not put Chapa/Cloudinary/JWT secrets in `web/`.
+**API** — build: `npm install --include=dev && npm run build` · start: `npx prisma migrate deploy && node dist/server.js` · health: `/api/health`
+
+**Manual alternative:** create a Postgres instance and a Node Web Service with `rootDir: backend`, same build/start commands, and the env vars below.
+
+#### Render (`suqet-api`) env vars
+
+| Variable | Required | Notes |
+|----------|----------|--------|
+| `DATABASE_URL` | yes | From Blueprint / Postgres |
+| `NODE_ENV` | yes | `production` |
+| `TRUST_PROXY` | yes | `true` on Render |
+| `JWT_SECRET` | yes | Blueprint can generate |
+| `JWT_EXPIRES_IN` | yes | e.g. `7d` |
+| `FRONTEND_URL` | yes | Vercel origin, e.g. `https://your-app.vercel.app` — **no trailing slash**. Used for CORS, Socket.io, redirects. |
+| `CORS_ORIGINS` | optional | Comma-separated extra origins (Vercel preview URLs). |
+| `BACKEND_PUBLIC_URL` | yes | Public API origin, e.g. `https://suqet-api.onrender.com` — no trailing slash |
+| `CHAPA_SECRET_KEY` | for TEST pay | Real `CHASECK_TEST-…` (not `xxx` placeholder) |
+| `CHAPA_WEBHOOK_SECRET` | for webhooks | Dashboard webhook secret |
+| `CHAPA_CALLBACK_URL` | for Chapa | e.g. `https://suqet-api.onrender.com/api/payments/callback` |
+| Cloudinary / SMTP / Google | optional | Same names as `backend/.env.example` |
+
+Chapa Test webhook URL in the dashboard:
+
+```
+https://<suqet-api-host>/api/payments/verify
+```
+
+Callback URL must match `CHAPA_CALLBACK_URL`.
+
+### 2. Vercel — Next.js (`web/`)
+
+1. [Vercel](https://vercel.com) → Import the GitHub repo.
+2. Set **Root Directory** to `web` (or import only `web/` if you prefer).
+3. Framework preset: Next.js. Build/output defaults are fine.
+4. Set env (Production):
+
+| Variable | Value |
+|----------|--------|
+| `NEXT_PUBLIC_API_URL` | Public Render API URL, e.g. `https://suqet-api.onrender.com` — **no trailing slash** (must match how the client concatenates paths) |
+
+`NEXT_PUBLIC_*` is inlined at **build** time — redeploy after changing it. Do **not** put Chapa, Cloudinary, JWT, or DB secrets in Vercel / `web/`.
+
+5. Deploy. Paste the production URL into the **Hosted demo** row at the top of this README.
+
+### 3. Cross-origin (cookies + CORS)
+
+The browser calls the Render API from the Vercel origin with `credentials: 'include'`. Session cookie is `etm_sid`.
+
+| Setting | Why |
+|---------|-----|
+| API `FRONTEND_URL` = Vercel production origin | CORS + Socket.io allowlist (`credentials: true`) |
+| Optional `CORS_ORIGINS` | Extra preview hosts if judges use them |
+| `NODE_ENV=production` | Cookie `Secure; SameSite=None` (required for cross-site cookie) |
+| `TRUST_PROXY=true` | Correct client IP / Secure cookie behind Render |
+
+After the first Vercel deploy: copy the Vercel URL → set Render `FRONTEND_URL` → restart/redeploy API → confirm login still sets `etm_sid` and chat connects.
+
+### 4. Smoke-test
+
+1. `GET https://<api>/api/health`
+2. Open the Vercel site → log in (Sara) → browse → chat → Buy Now
+3. Confirm order status after return / sync
+
+Honest limits still apply: **Chapa TEST**, escrow is **DB-only** (`held` / `released` / `refunded`), SMTP often blocked on hosted platforms.
+
+Do **not** commit `.env` / `.env.local`.
 
 Local Docker Compose remains the supported path for judges who prefer to run the stack themselves (see **Setup**).

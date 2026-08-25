@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import prisma from './models/prisma';
 import { AuthTokenPayload } from './types';
 import { conversationRoom } from './utils/chatRooms';
+import { getCorsOrigins } from './utils/corsOrigins';
 
 const sendWindowMs = 10_000;
 const sendMax = 8;
@@ -39,7 +40,7 @@ function readToken(socket: { handshake: { auth?: Record<string, unknown>; header
 export function setupSocket(httpServer: HttpServer) {
   const io = new Server(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+      origin: getCorsOrigins(),
       methods: ['GET', 'POST'],
       credentials: true,
     },

@@ -1,7 +1,7 @@
-# SuqET — Render Blueprint (API + Postgres + Next.js)
+# SuqET — Render Blueprint (Postgres + API only)
+# Frontend (Next.js) deploys on Vercel — do not add a web service here.
 # Dashboard: New → Blueprint → connect this repo → render.yaml
-# After first deploy, set sync:false secrets and rebuild the web service so
-# NEXT_PUBLIC_API_URL is baked into the Next.js client bundle.
+# After hostnames exist, set sync:false secrets (FRONTEND_URL = Vercel URL, etc.).
 
 databases:
   - name: suqet-db
@@ -32,7 +32,11 @@ services:
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 7d
+      # Vercel production origin (no trailing slash). Required for CORS + cookie credentials.
       - key: FRONTEND_URL
+        sync: false
+      # Optional comma-separated extra origins (e.g. Vercel preview URLs).
+      - key: CORS_ORIGINS
         sync: false
       - key: BACKEND_PUBLIC_URL
         sync: false
@@ -63,18 +67,4 @@ services:
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_CALLBACK_URL
-        sync: false
-
-  - type: web
-    name: suqet-web
-    runtime: node
-    plan: starter
-    region: oregon
-    rootDir: web
-    buildCommand: npm install --include=dev && npm run build
-    startCommand: npm start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: NEXT_PUBLIC_API_URL
         sync: false

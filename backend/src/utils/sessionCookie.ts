@@ -19,7 +19,7 @@ export function readSessionToken(req: AuthRequest): string | null {
 }
 
 export function setSessionCookie(res: Response, token: string): void {
-  // Production web + API are different onrender.com hosts (cross-site). Lax is not sent on XHR.
+  // Cross-site (Vercel frontend → Render API): Lax is not sent on credentialed XHR.
   const secure = process.env.NODE_ENV === 'production';
   res.cookie(COOKIE, token, {
     httpOnly: true,
