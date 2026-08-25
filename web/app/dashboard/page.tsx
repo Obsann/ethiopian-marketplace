@@ -10,17 +10,6 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 
-interface HeldTransaction {
-  id: string;
-  listing_id: string;
-  listing_title: string;
-  buyer_name: string;
-  amount: number;
-  chapa_ref: string;
-  status: string;
-  created_at: string;
-}
-
 interface DashboardData {
   stats: {
     active_listings: number;
@@ -37,15 +26,18 @@ interface DashboardData {
     view_count: number;
     image: string | null;
   }[];
-  held_transactions: HeldTransaction[];
   recent_messages: {
     id: string;
     content: string;
-    sender_id?: string;
-    receiver_id?: string;
     sender: { id: string; name: string };
-    receiver?: { id: string; name: string };
     listing: { id: string; title: string };
+  }[];
+  held_sales: {
+    id: string;
+    amount: number;
+    status: string;
+    listing: { id: string; title: string };
+    created_at: string;
   }[];
 }
 
@@ -55,53 +47,43 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [releasingId, setReleasingId] = useState<string | null>(null);
-  const [note, setNote] = useState('');
+  const [busyId, setBusyId] = useState('');
+  const canManage = user?.role === 'seller' || user?.role === 'admin';
 
   useEffect(() => {
-    if (!isLoading && !user) router.replace('/auth/login?next=/dashboard');
-  }, [user, isLoading, router]);
+    if (isLoading) return;
+    if (!user) {
+      router.replace('/auth/login?next=/dashboard');
+      return;
+    }
+    if (!canManage) router.replace('/');
+  }, [user, isLoading, router, canManage]);
 
   useEffect(() => {
-    if (!token) return;
-    api<DashboardData>('/api/dashboard', { token })
-      .then((r) =>
-        setData({
-          ...r.data,
-          held_transactions: r.data.held_transactions ?? [],
-        })
-      )
+    if (!user || !canManage) return;
+    api<DashboardData>('/api/dashboard', token ? { token } : {})
+      .then((r) => setData(r.data))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [user, token, canManage]);
 
-  async function releaseFunds(transactionId: string) {
-    if (!token || !confirm('Confirm delivery and release funds to yourself?')) return;
-    setReleasingId(transactionId);
-    setNote('');
+  async function releaseSale(id: string) {
+    if (!user) return;
+    setBusyId(id);
     try {
-      await api(`/api/payments/release/${transactionId}`, {
-        method: 'POST',
-        token,
-      });
+      await api(`/api/payments/release/${id}`, { method: 'POST', token });
       setData((d) =>
-        d
-          ? {
-              ...d,
-              held_transactions: d.held_transactions.filter((t) => t.id !== transactionId),
-            }
-          : d
+        d ? { ...d, held_sales: d.held_sales.filter((s) => s.id !== id) } : d
       );
-      setNote('Funds released.');
     } catch (e) {
-      setNote(e instanceof Error ? e.message : 'Could not release funds');
+      setError(e instanceof Error ? e.message : 'Could not release');
     } finally {
-      setReleasingId(null);
+      setBusyId('');
     }
   }
 
   async function removeListing(id: string) {
-    if (!token || !confirm('Remove this listing?')) return;
+    if (!user || !confirm('Remove this listing?')) return;
     await api(`/api/listings/${id}`, { method: 'DELETE', token });
     setData((d) =>
       d
@@ -117,7 +99,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (isLoading || loading) {
+  if (isLoading || !canManage || loading) {
     return (
       <div className="flex justify-center py-16">
         <Spinner />
@@ -125,8 +107,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (error) return <p className="text-red-600">{error}</p>;
-  if (!data) return null;
+  if (!data) return error ? <p className="text-red-600">{error}</p> : null;
 
   return (
     <div className="space-y-8">
@@ -139,6 +120,8 @@ export default function DashboardPage() {
           <Button>New listing</Button>
         </Link>
       </div>
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
       {!data.is_verified && (
         <div className="rounded-lg border border-accent-400/40 bg-accent-400/10 px-4 py-3 text-sm">
@@ -156,53 +139,12 @@ export default function DashboardPage() {
           ['Unread', data.stats.unread_messages],
           ['Pending verify', data.stats.pending_verifications],
         ].map(([label, value]) => (
-          <div key={String(label)} className="rounded-2xl border border-black/8 bg-white p-4 shadow-card">
+          <div key={String(label)} className="rounded-lg border border-black/8 bg-white/90 p-4">
             <p className="text-xs text-ink/60">{label}</p>
             <p className="mt-1 text-2xl font-bold">{value}</p>
           </div>
         ))}
       </div>
-
-      {note && <p className="text-sm text-brand-700">{note}</p>}
-
-      <section className="space-y-3">
-        <h2 className="font-display text-xl font-semibold">Held payments</h2>
-        <p className="text-sm text-ink/60">
-          Funds stay in escrow until you confirm the buyer received the item.
-        </p>
-        {data.held_transactions.length === 0 ? (
-          <p className="text-sm text-ink/60">No payments waiting for release.</p>
-        ) : (
-          <ul className="space-y-3">
-            {data.held_transactions.map((t) => (
-              <li
-                key={t.id}
-                className="flex flex-col gap-3 rounded-lg border border-black/8 bg-white/90 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0 space-y-1">
-                  <Link
-                    href={`/listings/${t.listing_id}`}
-                    className="font-medium hover:underline"
-                  >
-                    {t.listing_title}
-                  </Link>
-                  <p className="text-sm text-ink/70">
-                    {t.amount.toLocaleString()} ETB · {t.buyer_name}
-                  </p>
-                  <p className="break-all text-xs text-ink/50">{t.chapa_ref}</p>
-                </div>
-                <Button
-                  onClick={() => releaseFunds(t.id)}
-                  loading={releasingId === t.id}
-                  className="w-full shrink-0 sm:w-auto"
-                >
-                  Confirm Delivery / Release Funds
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
 
       <section className="space-y-3">
         <h2 className="font-display text-xl font-semibold">My listings</h2>
@@ -238,18 +180,13 @@ export default function DashboardPage() {
                   <td className="px-3 py-2">{l.price.toLocaleString()} ETB</td>
                   <td className="px-3 py-2">{l.view_count}</td>
                   <td className="px-3 py-2">
-                    <div className="flex flex-wrap gap-3">
-                      <Link href={`/listings/${l.id}/edit`} className="text-brand-600 hover:underline">
-                        Edit
-                      </Link>
-                      <button
-                        type="button"
-                        className="text-red-600 hover:underline"
-                        onClick={() => removeListing(l.id)}
-                      >
-                        Delete
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      className="text-red-600 hover:underline"
+                      onClick={() => removeListing(l.id)}
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -259,33 +196,44 @@ export default function DashboardPage() {
       </section>
 
       <section className="space-y-3">
-        <div className="flex items-end justify-between gap-3">
-          <h2 className="font-display text-xl font-semibold">Recent messages</h2>
-          <Link href="/chat" className="text-sm font-medium text-brand-600 hover:underline">
-            Open inbox
-          </Link>
-        </div>
+        <h2 className="font-display text-xl font-semibold">Held payments</h2>
         <ul className="space-y-2">
-          {data.recent_messages.map((m) => {
-            const otherId =
-              m.sender.id === user?.id ? m.receiver?.id : m.sender.id;
-            return (
-              <li key={m.id} className="rounded-2xl border border-black/8 bg-white px-4 py-3 text-sm shadow-card">
-                <p className="font-medium">
-                  {m.sender.id === user?.id ? m.receiver?.name || 'You' : m.sender.name} · {m.listing.title}
-                </p>
-                <p className="text-ink/70">{m.content}</p>
-                {otherId && (
-                  <Link
-                    href={`/chat/${m.listing.id}?with=${otherId}`}
-                    className="mt-2 inline-block text-sm font-medium text-brand-600 hover:underline"
-                  >
-                    Reply
-                  </Link>
-                )}
-              </li>
-            );
-          })}
+          {(data.held_sales ?? []).map((s) => (
+            <li
+              key={s.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-black/8 bg-white/90 px-4 py-3 text-sm"
+            >
+              <div>
+                <Link href={`/listings/${s.listing.id}`} className="font-medium hover:underline">
+                  {s.listing.title}
+                </Link>
+                <p className="text-ink/70">{s.amount.toLocaleString()} ETB held</p>
+              </div>
+              <Button loading={busyId === s.id} onClick={() => releaseSale(s.id)}>
+                Confirm delivery
+              </Button>
+            </li>
+          ))}
+          {(data.held_sales ?? []).length === 0 && (
+            <p className="text-sm text-ink/60">No held payments.</p>
+          )}
+        </ul>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="font-display text-xl font-semibold">Recent messages</h2>
+        <ul className="space-y-2">
+          {data.recent_messages.map((m) => (
+            <li key={m.id} className="rounded-lg border border-black/8 bg-white/90 px-4 py-3 text-sm">
+              <Link
+                href={`/listings/${m.listing.id}?with=${m.sender.id}`}
+                className="font-medium hover:underline"
+              >
+                {m.sender.name} · {m.listing.title}
+              </Link>
+              <p className="text-ink/70">{m.content}</p>
+            </li>
+          ))}
           {data.recent_messages.length === 0 && (
             <p className="text-sm text-ink/60">No messages yet.</p>
           )}

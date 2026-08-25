@@ -3,60 +3,68 @@ import prisma from '../models/prisma';
 import { AuthRequest } from '../middleware/auth';
 import { sendError, sendSuccess } from '../utils/response';
 import { messages } from '../utils/messages';
+import { allowSend } from '../socket';
+import { conversationRoom } from '../utils/chatRooms';
 
-export async function getConversation(req: AuthRequest, res: Response) {
-  if (!req.user) return sendError(res, messages.unauthorized, 401);
-  const listing_id = req.params.listing_id;
-  const withUserId = String(req.query.with || '');
-  if (!withUserId) return sendError(res, 'with=userId is required', 400);
+const MAX_CONTENT = 2000;
 
-  const messagesList = await prisma.message.findMany({
-    where: {
-      listing_id,
-      OR: [
-        { sender_id: req.user.userId, receiver_id: withUserId },
-        { sender_id: withUserId, receiver_id: req.user.userId },
-      ],
-    },
-    include: { sender: { select: { id: true, name: true } } },
-    orderBy: { created_at: 'asc' },
-  });
+function mapMessage(m: {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  listing_id: string;
+  content: string;
+  type: string;
+  offer_amount: { toString(): string } | number | null;
+  read_at: Date | null;
+  created_at: Date;
+}) {
+  return {
+    id: m.id,
+    sender_id: m.sender_id,
+    receiver_id: m.receiver_id,
+    listing_id: m.listing_id,
+    content: m.content,
+    type: m.type,
+    offer_amount: m.offer_amount === null ? null : Number(m.offer_amount),
+    read_at: m.read_at ? m.read_at.toISOString() : null,
+    created_at: m.created_at.toISOString(),
+  };
+}
 
-  await prisma.message.updateMany({
-    where: {
-      listing_id,
-      sender_id: withUserId,
-      receiver_id: req.user.userId,
-      read_at: null,
-    },
-    data: { read_at: new Date() },
-  });
+async function assertCanMessage(
+  senderId: string,
+  receiverId: string,
+  listingId: string
+): Promise<string | null> {
+  if (senderId === receiverId) return 'You cannot message yourself';
+  const listing = await prisma.listing.findUnique({ where: { id: listingId } });
+  if (!listing || listing.status === 'removed') return 'Listing not found';
 
-  return sendSuccess(res, messagesList);
+  if (senderId !== listing.seller_id && receiverId !== listing.seller_id) {
+    return 'You can only message the seller about this listing';
+  }
+  return null;
 }
 
 export async function sendMessage(req: AuthRequest, res: Response) {
   if (!req.user) return sendError(res, messages.unauthorized, 401);
+  if (!allowSend(req.user.userId)) {
+    return sendError(res, 'Too many messages. Please wait a moment.', 429);
+  }
 
-  const listing_id = req.params.listing_id;
+  const listing_id = String(req.body.listing_id || '');
   const receiver_id = String(req.body.receiver_id || '');
   const content = String(req.body.content || '').trim();
-  if (!receiver_id) return sendError(res, 'receiver_id is required', 400);
-  if (!content) return sendError(res, 'Message cannot be empty', 400);
-  if (receiver_id === req.user.userId) {
-    return sendError(res, 'You cannot message yourself', 400);
+  if (!listing_id || !receiver_id || !content) {
+    return sendError(res, 'listing_id, receiver_id, and content are required', 400);
+  }
+  if (content.length > MAX_CONTENT) {
+    return sendError(res, `Message must be ${MAX_CONTENT} characters or less`, 400);
   }
 
-  const listing = await prisma.listing.findUnique({ where: { id: listing_id } });
-  if (!listing || listing.status === 'removed') {
-    return sendError(res, 'Listing not found', 404);
-  }
-  if (listing.seller_id !== req.user.userId && listing.seller_id !== receiver_id) {
-    return sendError(res, 'Chat must include the listing seller', 403);
-  }
-
-  const receiver = await prisma.user.findUnique({ where: { id: receiver_id } });
-  if (!receiver) return sendError(res, 'Recipient not found', 404);
+  const denied = await assertCanMessage(req.user.userId, receiver_id, listing_id);
+  if (denied) return sendError(res, denied, 403);
 
   const message = await prisma.message.create({
     data: {
@@ -72,64 +80,92 @@ export async function sendMessage(req: AuthRequest, res: Response) {
     data: {
       user_id: receiver_id,
       type: 'new_message',
-      message: `New message about "${listing.title}"`,
+      message: 'You have a new message about a listing.',
     },
   });
 
   const io = req.app.get('io');
   if (io) {
-    io.to(`user:${receiver_id}`).emit('receive_message', message);
-    io.to(`user:${req.user.userId}`).emit('receive_message', message);
-    io.to(`user:${receiver_id}`).emit('notification', { type: 'new_message', listing_id });
+    const payload = mapMessage(message);
+    io.to(`user:${receiver_id}`).emit('receive_message', payload);
+    io.to(conversationRoom(listing_id, req.user.userId, receiver_id)).emit(
+      'receive_message',
+      payload
+    );
+    io.to(`user:${receiver_id}`).emit('notification', {
+      type: 'new_message',
+      listing_id,
+    });
   }
 
-  return sendSuccess(res, message, 'Message sent', 201);
+  return sendSuccess(res, mapMessage(message), 'Message sent', 201);
 }
 
-export async function listConversations(req: AuthRequest, res: Response) {
+export async function getConversation(req: AuthRequest, res: Response) {
+  if (!req.user) return sendError(res, messages.unauthorized, 401);
+  const listing_id = req.params.listing_id;
+  const withUserId = String(req.query.with || '');
+  if (!withUserId) return sendError(res, 'with=userId is required', 400);
+
+  const denied = await assertCanMessage(req.user.userId, withUserId, listing_id);
+  if (denied) return sendError(res, denied, 403);
+
+  const messagesList = await prisma.message.findMany({
+    where: {
+      listing_id,
+      OR: [
+        { sender_id: req.user.userId, receiver_id: withUserId },
+        { sender_id: withUserId, receiver_id: req.user.userId },
+      ],
+    },
+    orderBy: { created_at: 'asc' },
+  });
+
+  await prisma.message.updateMany({
+    where: {
+      listing_id,
+      sender_id: withUserId,
+      receiver_id: req.user.userId,
+      read_at: null,
+    },
+    data: { read_at: new Date() },
+  });
+
+  return sendSuccess(res, messagesList.map(mapMessage));
+}
+
+export async function getConversations(req: AuthRequest, res: Response) {
   if (!req.user) return sendError(res, messages.unauthorized, 401);
   const userId = req.user.userId;
 
   const rows = await prisma.message.findMany({
-    where: {
-      OR: [{ sender_id: userId }, { receiver_id: userId }],
-    },
+    where: { OR: [{ sender_id: userId }, { receiver_id: userId }] },
+    orderBy: { created_at: 'desc' },
+    take: 200,
     include: {
       listing: { select: { id: true, title: true } },
       sender: { select: { id: true, name: true } },
       receiver: { select: { id: true, name: true } },
     },
-    orderBy: { created_at: 'desc' },
-    take: 200,
   });
 
-  const threads = new Map<
-    string,
-    {
-      listing_id: string;
-      listing_title: string;
-      other_user: { id: string; name: string };
-      last_message: string;
-      last_at: string;
-      unread: boolean;
-    }
-  >();
-
-  for (const m of rows) {
-    const other = m.sender_id === userId ? m.receiver : m.sender;
-    const key = `${m.listing_id}:${other.id}`;
-    if (threads.has(key)) continue;
-    threads.set(key, {
-      listing_id: m.listing_id,
-      listing_title: m.listing.title,
-      other_user: { id: other.id, name: other.name },
-      last_message: m.content,
-      last_at: m.created_at.toISOString(),
-      unread: m.receiver_id === userId && !m.read_at,
+  const seen = new Set<string>();
+  const items = [];
+  for (const row of rows) {
+    const otherId = row.sender_id === userId ? row.receiver_id : row.sender_id;
+    const key = `${row.listing_id}:${otherId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const other = row.sender_id === userId ? row.receiver : row.sender;
+    items.push({
+      listing_id: row.listing_id,
+      listing_title: row.listing.title,
+      other_user: other,
+      last_message: mapMessage(row),
     });
   }
 
-  return sendSuccess(res, Array.from(threads.values()));
+  return sendSuccess(res, items);
 }
 
 export async function getNotifications(req: AuthRequest, res: Response) {
@@ -159,7 +195,7 @@ export async function sellerDashboard(req: AuthRequest, res: Response) {
   if (!req.user) return sendError(res, messages.unauthorized, 401);
   const sellerId = req.user.userId;
 
-  const [active, sold, unreadMessages, pendingVerification, listings, recentMessages, heldTransactions] =
+  const [active, sold, unreadMessages, pendingVerification, listings, recentMessages, heldSales] =
     await Promise.all([
       prisma.listing.count({ where: { seller_id: sellerId, status: 'active' } }),
       prisma.listing.count({ where: { seller_id: sellerId, status: 'sold' } }),
@@ -176,24 +212,19 @@ export async function sellerDashboard(req: AuthRequest, res: Response) {
         take: 20,
       }),
       prisma.message.findMany({
-        where: {
-          OR: [{ receiver_id: sellerId }, { sender_id: sellerId }],
-        },
+        where: { receiver_id: sellerId },
         include: {
           sender: { select: { id: true, name: true } },
-          receiver: { select: { id: true, name: true } },
           listing: { select: { id: true, title: true } },
         },
         orderBy: { created_at: 'desc' },
-        take: 20,
+        take: 5,
       }),
       prisma.transaction.findMany({
         where: { seller_id: sellerId, status: 'held' },
-        include: {
-          listing: { select: { id: true, title: true } },
-          buyer: { select: { id: true, name: true } },
-        },
+        include: { listing: { select: { id: true, title: true } } },
         orderBy: { created_at: 'desc' },
+        take: 10,
       }),
     ]);
 
@@ -215,28 +246,13 @@ export async function sellerDashboard(req: AuthRequest, res: Response) {
       view_count: l.view_count,
       image: l.images.find((i) => i.is_primary)?.url || l.images[0]?.url || null,
     })),
-    held_transactions: heldTransactions.map((t) => ({
+    recent_messages: recentMessages,
+    held_sales: heldSales.map((t) => ({
       id: t.id,
-      listing_id: t.listing_id,
-      listing_title: t.listing.title,
-      buyer_name: t.buyer.name,
       amount: Number(t.amount),
-      chapa_ref: t.chapa_ref,
       status: t.status,
+      listing: t.listing,
       created_at: t.created_at.toISOString(),
     })),
-    recent_messages: (() => {
-      const seen = new Set<string>();
-      const unique = [];
-      for (const m of recentMessages) {
-        const otherId = m.sender_id === sellerId ? m.receiver_id : m.sender_id;
-        const key = `${m.listing_id}:${otherId}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        unique.push(m);
-        if (unique.length >= 8) break;
-      }
-      return unique;
-    })(),
   });
 }

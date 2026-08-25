@@ -58,28 +58,33 @@ export async function listReports(req: AuthRequest, res: Response) {
     }),
   ]);
 
-  const enriched = await Promise.all(
-    items.map(async (report) => {
-      let target: { id: string; title?: string; name?: string; email?: string } | null = null;
-      if (report.target_type === 'listing') {
-        const listing = await prisma.listing.findUnique({
-          where: { id: report.target_id },
+  const listingIds = items.filter((i) => i.target_type === 'listing').map((i) => i.target_id);
+  const userIds = items.filter((i) => i.target_type === 'user').map((i) => i.target_id);
+  const [listings, users] = await Promise.all([
+    listingIds.length
+      ? prisma.listing.findMany({
+          where: { id: { in: listingIds } },
           select: { id: true, title: true },
-        });
-        target = listing;
-      } else {
-        const user = await prisma.user.findUnique({
-          where: { id: report.target_id },
+        })
+      : [],
+    userIds.length
+      ? prisma.user.findMany({
+          where: { id: { in: userIds } },
           select: { id: true, name: true, email: true },
-        });
-        target = user;
-      }
-      return { ...report, target };
-    })
-  );
+        })
+      : [],
+  ]);
+  const listingMap = new Map(listings.map((l) => [l.id, l]));
+  const userMap = new Map(users.map((u) => [u.id, u]));
 
   return sendSuccess(res, {
-    items: enriched,
+    items: items.map((item) => ({
+      ...item,
+      target:
+        item.target_type === 'listing'
+          ? listingMap.get(item.target_id) ?? null
+          : userMap.get(item.target_id) ?? null,
+    })),
     pagination: { page, limit, total, pages: Math.ceil(total / limit) },
   });
 }

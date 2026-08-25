@@ -2,14 +2,13 @@
 
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { GoogleSignInButton } from '@/components/GoogleSignInButton';
 
 export default function RegisterPage() {
   const { register } = useAuth();
-  const router = useRouter();
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -17,10 +16,12 @@ export default function RegisterPage() {
     password: '',
     role: 'buyer' as 'buyer' | 'seller',
   });
-  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [verifyUrl, setVerifyUrl] = useState('');
+  const [done, setDone] = useState(false);
+  const [doneMessage, setDoneMessage] = useState('');
 
   function update(key: string, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -39,8 +40,10 @@ export default function RegisterPage() {
     setLoading(true);
     setFormError('');
     try {
-      await register(form);
-      router.push('/');
+      const data = await register(form);
+      setVerifyUrl(data.verifyUrl || '');
+      setDoneMessage(data.message || '');
+      setDone(true);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
@@ -48,82 +51,65 @@ export default function RegisterPage() {
     }
   }
 
-  return (
-    <div className="mx-auto grid max-w-md gap-6 lg:max-w-4xl lg:grid-cols-2 lg:items-center">
-      <div className="hidden rounded-3xl bg-brand-900 p-8 text-white lg:block">
-        <p className="font-display text-3xl font-bold">
-          Suq<span className="text-accent-400">ET</span>
+  if (done) {
+    return (
+      <div className="mx-auto max-w-md space-y-4 rounded-xl border border-black/8 bg-white/90 p-5 text-sm">
+        <h1 className="font-display text-2xl font-semibold">Check your email</h1>
+        <p>
+          {doneMessage ||
+            `We sent a confirmation link to ${form.email}. Confirm it before you log in.`}
         </p>
-        <p className="mt-4 text-white/80">
-          Create an account to buy with escrow or list items as a verified seller.
-        </p>
+        {verifyUrl && (
+          <p>
+            Local dev (SMTP not sending):{' '}
+            <Link href={verifyUrl} className="break-all font-medium text-brand-600 hover:underline">
+              Open confirmation link
+            </Link>
+          </p>
+        )}
+        <Link href="/auth/login" className="inline-block font-medium text-brand-600 hover:underline">
+          Back to log in
+        </Link>
       </div>
-      <div className="space-y-5">
-        <div>
-          <h1 className="font-display text-3xl font-semibold">Create account</h1>
-          <p className="mt-1 text-sm text-ink/70">Join Ethiopia&apos;s second-hand marketplace.</p>
-        </div>
-        <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-black/8 bg-white p-5 shadow-card">
-          <Input label="Full name" value={form.name} onChange={(e) => update('name', e.target.value)} error={errors.name} required autoComplete="name" />
-          <Input label="Email" type="email" value={form.email} onChange={(e) => update('email', e.target.value)} error={errors.email} required autoComplete="email" />
-          <Input label="Phone" value={form.phone} onChange={(e) => update('phone', e.target.value)} error={errors.phone} placeholder="+2519…" required autoComplete="tel" />
-          <div className="relative">
-            <Input
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
-              value={form.password}
-              onChange={(e) => update('password', e.target.value)}
-              error={errors.password}
-              required
-              autoComplete="new-password"
-            />
-            <button
-              type="button"
-              className="absolute right-3 top-[2.15rem] text-xs font-medium text-brand-700"
-              onClick={() => setShowPassword((v) => !v)}
-            >
-              {showPassword ? 'Hide' : 'Show'}
-            </button>
-          </div>
-          <fieldset>
-            <legend className="mb-2 text-sm font-medium text-ink/80">I want to</legend>
-            <div className="grid grid-cols-2 gap-2">
-              {(
-                [
-                  ['buyer', 'Buy items', 'Shop with escrow'],
-                  ['seller', 'Sell items', 'List and get paid'],
-                ] as const
-              ).map(([value, title, hint]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => update('role', value)}
-                  className={`rounded-2xl border px-3 py-3 text-left transition ${
-                    form.role === value
-                      ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20'
-                      : 'border-black/10 bg-white hover:border-brand-500/40'
-                  }`}
-                >
-                  <span className="block text-sm font-semibold">{title}</span>
-                  <span className="mt-0.5 block text-xs text-ink/55">{hint}</span>
-                </button>
-              ))}
-            </div>
-          </fieldset>
-          {formError && (
-            <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</p>
-          )}
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-md space-y-6">
+      <div>
+        <h1 className="font-display text-3xl font-semibold">Create account</h1>
+        <p className="mt-1 text-sm text-ink/70">Join Ethiopia&apos;s second-hand marketplace.</p>
+      </div>
+      <div className="space-y-4 rounded-xl border border-black/8 bg-white/90 p-5">
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-ink/80">I want to</span>
+          <select
+            className="w-full rounded-md border border-black/10 bg-white px-3 py-2.5 text-sm"
+            value={form.role}
+            onChange={(e) => update('role', e.target.value)}
+          >
+            <option value="buyer">Buy items</option>
+            <option value="seller">Sell items</option>
+          </select>
+        </label>
+        <GoogleSignInButton role={form.role} />
+        <form onSubmit={onSubmit} className="space-y-4">
+          <Input label="Full name" value={form.name} onChange={(e) => update('name', e.target.value)} error={errors.name} required />
+          <Input label="Email" type="email" value={form.email} onChange={(e) => update('email', e.target.value)} error={errors.email} required />
+          <Input label="Phone" value={form.phone} onChange={(e) => update('phone', e.target.value)} error={errors.phone} placeholder="+2519…" required />
+          <Input label="Password" type="password" value={form.password} onChange={(e) => update('password', e.target.value)} error={errors.password} required />
+          {formError && <p className="text-sm text-red-600">{formError}</p>}
           <Button type="submit" className="w-full" loading={loading}>
             Sign up
           </Button>
         </form>
-        <p className="text-center text-sm">
-          Already have an account?{' '}
-          <Link href="/auth/login" className="font-medium text-brand-600 hover:underline">
-            Log in
-          </Link>
-        </p>
       </div>
+      <p className="text-center text-sm">
+        Already have an account?{' '}
+        <Link href="/auth/login" className="font-medium text-brand-600 hover:underline">
+          Log in
+        </Link>
+      </p>
     </div>
   );
 }

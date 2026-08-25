@@ -5,6 +5,7 @@ import prisma from '../models/prisma';
 import { AuthRequest } from '../middleware/auth';
 import { sendError, sendSuccess } from '../utils/response';
 import { uploadImageBuffer } from '../utils/cloudinary';
+import { isLikelyImageBuffer } from '../utils/kycStorage';
 import { messages } from '../utils/messages';
 import { idsMatchingFullText, mapListing } from '../utils/listings';
 
@@ -55,6 +56,9 @@ export async function createListing(req: AuthRequest, res: Response) {
 
   const urls: string[] = [];
   for (const file of files.slice(0, 5)) {
+    if (!isLikelyImageBuffer(file.buffer)) {
+      return sendError(res, 'Each photo must be a JPEG, PNG, or WebP image', 400);
+    }
     urls.push(await uploadImageBuffer(file.buffer));
   }
 
@@ -77,7 +81,7 @@ export async function createListing(req: AuthRequest, res: Response) {
 
 export async function getListings(req: AuthRequest, res: Response) {
   const page = Math.max(1, Number(req.query.page) || 1);
-  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
   const skip = (page - 1) * limit;
 
   const where: Prisma.ListingWhereInput = { status: 'active' };
@@ -141,7 +145,7 @@ export async function getListingById(req: AuthRequest, res: Response) {
     where: { id },
     include: {
       images: true,
-      seller: { select: { id: true, name: true, is_verified: true, phone: true } },
+      seller: { select: { id: true, name: true, is_verified: true } },
       category: true,
     },
   });
@@ -159,7 +163,7 @@ export async function getListingById(req: AuthRequest, res: Response) {
     data: { view_count: { increment: 1 } },
     include: {
       images: true,
-      seller: { select: { id: true, name: true, is_verified: true, phone: true } },
+      seller: { select: { id: true, name: true, is_verified: true } },
       category: true,
     },
   });
@@ -183,6 +187,23 @@ export async function updateListing(req: AuthRequest, res: Response) {
       400,
       JSON.stringify(parsed.error.flatten().fieldErrors)
     );
+  }
+
+  if (parsed.data.status === 'active' && listing.status !== 'active') {
+    const locked = await prisma.transaction.findFirst({
+      where: {
+        listing_id: listing.id,
+        status: { in: ['held', 'released'] },
+      },
+      select: { id: true },
+    });
+    if (locked || listing.status === 'sold') {
+      return sendError(
+        res,
+        'This listing has a held or completed sale and cannot be reactivated',
+        409
+      );
+    }
   }
 
   const data: Prisma.ListingUpdateInput = {};

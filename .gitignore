@@ -36,6 +36,8 @@ backend/prisma/*.db-journal
 
 # Uploads / temp
 uploads/
+private/
+tmp/
 tmp/
 _extracted/
 
@@ -43,3 +45,7 @@ _extracted/
 *.log
 coverage/
 .turbo/
+
+# Local only ? do not publish
+CONTRIBUTIONS.md
+

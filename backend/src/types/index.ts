@@ -11,13 +11,15 @@ export type NotificationType =
   | 'listing_sold'
   | 'verification_approved'
   | 'verification_rejected'
-  | 'payment_failed';
+  | 'payment_failed'
+  | 'payment_refunded'
+  | 'funds_released';
 
 export interface User {
   id: string;
   name: string;
   email: string;
-  phone: string;
+  phone: string | null;
   role: UserRole;
   is_verified: boolean;
   created_at: string;

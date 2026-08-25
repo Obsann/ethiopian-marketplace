@@ -1,13 +1,8 @@
 import { Router } from 'express';
-import multer from 'multer';
 import * as listingsController from '../controllers/listings';
 import { authenticate, requireRoles } from '../middleware/auth';
 import { asyncHandler } from '../middleware/asyncHandler';
-
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024, files: 5 },
-});
+import { listingUpload } from '../utils/upload';
 
 const router = Router();
 
@@ -18,7 +13,7 @@ router.post(
   '/',
   authenticate,
   requireRoles('seller', 'admin'),
-  upload.array('images', 5),
+  listingUpload.array('images', 5),
   asyncHandler(listingsController.createListing)
 );
 router.put('/:id', authenticate, asyncHandler(listingsController.updateListing));

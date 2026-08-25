@@ -19,6 +19,7 @@ export async function api<T>(
   try {
     res = await fetch(`${API_URL}${path}`, {
       ...rest,
+      credentials: 'include',
       headers: {
         ...(rest.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

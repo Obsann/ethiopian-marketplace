@@ -41,6 +41,9 @@ export function errorHandler(
     if (e.code === 'P2002') {
       return sendError(res, 'A record with this value already exists', 409);
     }
+    if (e.name === 'MulterError' || e.message === 'Only image uploads are allowed') {
+      return sendError(res, e.message || 'Invalid upload', 400);
+    }
   }
 
   console.error(err);

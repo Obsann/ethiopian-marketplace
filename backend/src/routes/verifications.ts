@@ -1,20 +1,15 @@
 import { Router } from 'express';
-import multer from 'multer';
 import * as verificationsController from '../controllers/verifications';
 import { authenticate, requireRoles } from '../middleware/auth';
 import { asyncHandler } from '../middleware/asyncHandler';
-
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
-});
+import { verificationUpload } from '../utils/upload';
 
 const router = Router();
 
 router.post(
   '/submit',
   authenticate,
-  upload.fields([
+  verificationUpload.fields([
     { name: 'id_image', maxCount: 1 },
     { name: 'face_image', maxCount: 1 },
   ]),
@@ -25,6 +20,12 @@ router.get(
   authenticate,
   requireRoles('admin'),
   asyncHandler(verificationsController.listPendingVerifications)
+);
+router.get(
+  '/:id/images/:kind',
+  authenticate,
+  requireRoles('admin'),
+  asyncHandler(verificationsController.streamVerificationImage)
 );
 router.patch(
   '/:id/review',

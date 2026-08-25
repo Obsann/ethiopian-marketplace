@@ -3,12 +3,11 @@ import { sendSuccess } from '../utils/response';
 
 const router = Router();
 
-router.get('/', (_req: Request, res: Response) => {
+function health(_req: Request, res: Response) {
   return sendSuccess(res, { status: 'ok' }, 'Healthy');
-});
+}
 
-router.post('/', (_req: Request, res: Response) => {
-  return sendSuccess(res, { status: 'ok' }, 'Healthy');
-});
+router.get('/', health);
+router.post('/', health);
 
 export default router;

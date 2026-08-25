@@ -4,10 +4,12 @@ import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
+import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { GoogleSignInButton } from '@/components/GoogleSignInButton';
 
 function LoginForm() {
   const { login } = useAuth();
@@ -15,7 +17,6 @@ function LoginForm() {
   const params = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -41,21 +42,14 @@ function LoginForm() {
   }
 
   return (
-    <div className="mx-auto grid max-w-md gap-6 lg:max-w-4xl lg:grid-cols-2 lg:items-center">
-      <div className="hidden rounded-3xl bg-brand-900 p-8 text-white lg:block">
-        <p className="font-display text-3xl font-bold">
-          Suq<span className="text-accent-400">ET</span>
-        </p>
-        <p className="mt-4 text-white/80">
-          Sign in to buy with escrow, message sellers, and manage your listings.
-        </p>
+    <div className="mx-auto max-w-md space-y-6">
+      <div>
+        <h1 className="font-display text-3xl font-semibold">Log in</h1>
+        <p className="mt-1 text-sm text-ink/70">Welcome back to SuqET.</p>
       </div>
-      <div className="space-y-5">
-        <div>
-          <h1 className="font-display text-3xl font-semibold">Log in</h1>
-          <p className="mt-1 text-sm text-ink/70">Welcome back to SuqET.</p>
-        </div>
-        <form onSubmit={onSubmit} className="space-y-4 rounded-2xl border border-black/8 bg-white p-5 shadow-card">
+      <div className="space-y-4 rounded-xl border border-black/8 bg-white/90 p-5">
+        <GoogleSignInButton next={params.get('next') || undefined} />
+        <form onSubmit={onSubmit} className="space-y-4">
           <Input
             label="Email"
             type="email"
@@ -63,45 +57,53 @@ function LoginForm() {
             onChange={(e) => setEmail(e.target.value)}
             error={errors.email}
             required
-            autoComplete="email"
           />
-          <div className="relative">
+          <div>
             <Input
               label="Password"
-              type={showPassword ? 'text' : 'password'}
+              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               error={errors.password}
               required
-              autoComplete="current-password"
             />
+            <p className="mt-1.5 text-right text-sm">
+              <Link href="/auth/forgot-password" className="font-medium text-brand-600 hover:underline">
+                Forgot password?
+              </Link>
+            </p>
+          </div>
+          {formError && <p className="text-sm text-red-600">{formError}</p>}
+          {formError.includes('Confirm your email') && (
             <button
               type="button"
-              className="absolute right-3 top-[2.15rem] text-xs font-medium text-brand-700"
-              onClick={() => setShowPassword((v) => !v)}
+              className="text-sm font-medium text-brand-600 hover:underline"
+              onClick={async () => {
+                try {
+                  await api('/api/auth/resend-verification', {
+                    method: 'POST',
+                    body: JSON.stringify({ email }),
+                  });
+                  setFormError('If that account needs confirmation, we sent a new link.');
+                } catch {
+                  setFormError('Could not resend confirmation email');
+                }
+              }}
             >
-              {showPassword ? 'Hide' : 'Show'}
+              Resend confirmation email
             </button>
-          </div>
-          {formError && (
-            <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</p>
           )}
           <Button type="submit" className="w-full" loading={loading}>
             Log in
           </Button>
-          <p className="text-center text-sm">
-            <Link href="/auth/forgot" className="font-medium text-brand-600 hover:underline">
-              Forgot password?
-            </Link>
-          </p>
         </form>
-        <p className="text-center text-sm">
-          New here?{' '}
-          <Link href="/auth/register" className="font-medium text-brand-600 hover:underline">
-            Create an account
-          </Link>
-        </p>
       </div>
+      <p className="text-center text-sm">
+        New here?{' '}
+        <Link href="/auth/register" className="font-medium text-brand-600 hover:underline">
+          Create an account
+        </Link>
+      </p>
     </div>
   );
 }

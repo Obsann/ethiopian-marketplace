@@ -59,6 +59,8 @@ enum NotificationType {
   verification_approved
   verification_rejected
   payment_failed
+  payment_refunded
+  funds_released
 }
 
 enum MessageType {
@@ -67,25 +69,69 @@ enum MessageType {
 }
 
 model User {
-  id            String         @id @default(uuid())
+  id            String   @id @default(uuid())
   name          String
-  email         String         @unique
-  password_hash String
-  phone         String         @unique
+  email         String   @unique
+  password_hash String?
+  phone         String?  @unique
+  google_id     String?  @unique
   role          Role
-  is_verified   Boolean        @default(false)
-  created_at    DateTime       @default(now())
+  is_verified   Boolean  @default(false)
+  email_verified Boolean @default(true)
+  created_at    DateTime @default(now())
 
-  listings             Listing[]       @relation("SellerListings")
-  sentMessages         Message[]       @relation("SentMessages")
-  receivedMessages     Message[]       @relation("ReceivedMessages")
-  buyerTransactions    Transaction[]   @relation("BuyerTransactions")
-  sellerTransactions   Transaction[]   @relation("SellerTransactions")
+  listings             Listing[]            @relation("SellerListings")
+  sentMessages         Message[]            @relation("SentMessages")
+  receivedMessages     Message[]            @relation("ReceivedMessages")
+  buyerTransactions    Transaction[]        @relation("BuyerTransactions")
+  sellerTransactions   Transaction[]        @relation("SellerTransactions")
   reports              Report[]
   verification         Verification?
   notifications        Notification[]
+  passwordResets       PasswordResetToken[]
+  emailVerifications   EmailVerificationToken[]
+  oauthCodes           OAuthExchangeCode[]
 
   @@index([role])
+}
+
+model PasswordResetToken {
+  id         String    @id @default(uuid())
+  user_id    String
+  token_hash String    @unique
+  expires_at DateTime
+  used_at    DateTime?
+  created_at DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model EmailVerificationToken {
+  id         String    @id @default(uuid())
+  user_id    String
+  token_hash String    @unique
+  expires_at DateTime
+  used_at    DateTime?
+  created_at DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model OAuthExchangeCode {
+  id         String    @id @default(uuid())
+  user_id    String
+  code_hash  String    @unique
+  expires_at DateTime
+  used_at    DateTime?
+  created_at DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 model Category {
@@ -145,6 +191,7 @@ model Message {
   listing  Listing @relation(fields: [listing_id], references: [id])
 
   @@index([sender_id, receiver_id])
+  @@index([listing_id])
 }
 
 model Transaction {
@@ -162,6 +209,9 @@ model Transaction {
   seller  User    @relation("SellerTransactions", fields: [seller_id], references: [id])
 
   @@index([status])
+  @@index([listing_id, status])
+  @@index([buyer_id])
+  @@index([seller_id])
 }
 
 model Report {
