@@ -1,9 +1,13 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BadgeCheck, Heart } from 'lucide-react';
 import { Listing } from '@/types';
 import { SafeImage } from '@/components/SafeImage';
+import { isSaved, toggleSaved } from '@/lib/saved';
+import { useAuth } from '@/lib/auth';
+import { api } from '@/lib/api';
 
 export function ListingCard({
   listing,
@@ -16,6 +20,13 @@ export function ListingCard({
   size?: 'default' | 'featured' | 'compact';
   href?: string;
 }) {
+  const { user, token } = useAuth();
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setSaved(isSaved(listing.id));
+  }, [listing.id]);
+
   const imgs = [
     listing.primary_image || listing.images?.[0],
     listing.images?.[1],
@@ -67,6 +78,7 @@ export function ListingCard({
           )}
           <span className="absolute bottom-3 left-3 text-[10px] font-semibold uppercase tracking-wider text-white/90">
             {listing.condition.replace('_', ' ')}
+            {listing.status === 'reserved' || listing.status === 'sold' ? ` · ${listing.status}` : ''}
           </span>
         </div>
         <div className="space-y-1 pt-3">
@@ -85,13 +97,29 @@ export function ListingCard({
       </Link>
       <button
         type="button"
-        className="absolute right-3 top-3 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/90 text-ink opacity-0 transition duration-300 hover:bg-white group-hover:opacity-100 focus-visible:opacity-100"
-        aria-label="Save for later"
+        className={`absolute right-3 top-3 z-10 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white/90 text-ink opacity-100 transition duration-300 hover:bg-white md:h-9 md:w-9 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 ${
+          saved ? 'text-et-red md:opacity-100' : ''
+        }`}
+        aria-label={saved ? 'Remove from saved' : 'Save for later'}
+        aria-pressed={saved}
         onClick={(e) => {
           e.preventDefault();
+          e.stopPropagation();
+          if (listing.id.startsWith('demo-')) {
+            setSaved(toggleSaved(listing.id));
+            return;
+          }
+          const next = toggleSaved(listing.id);
+          setSaved(next);
+          if (user) {
+            void api(`/api/listings/${listing.id}/save`, {
+              method: next ? 'POST' : 'DELETE',
+              token,
+            }).catch(() => {});
+          }
         }}
       >
-        <Heart className="h-4 w-4" aria-hidden />
+        <Heart className="h-4 w-4" aria-hidden fill={saved ? 'currentColor' : 'none'} />
       </button>
     </article>
   );

@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { api, ApiError } from '@/lib/api';
 import { disconnectSocket } from '@/lib/socket';
+import { syncSavedToApi } from '@/lib/saved';
 import type { User } from '@/types';
 
 interface AuthContextValue {
@@ -52,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((res) => {
         setUser(res.data.user);
         if (!res.data.user) setToken(null);
+        else void syncSavedToApi();
       })
       .catch(() => {
         setUser(null);
@@ -67,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     setToken(res.data.token);
     setUser(res.data.user);
+    void syncSavedToApi(res.data.token);
   }, []);
 
   const loginWithToken = useCallback(async (nextToken: string) => {
@@ -76,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setToken(nextToken);
     setUser(res.data.user);
+    void syncSavedToApi(nextToken);
   }, []);
 
   const register = useCallback(

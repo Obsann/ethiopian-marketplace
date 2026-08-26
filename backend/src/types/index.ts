@@ -1,5 +1,5 @@
 export type UserRole = 'buyer' | 'seller' | 'admin';
-export type ListingStatus = 'active' | 'sold' | 'removed';
+export type ListingStatus = 'active' | 'reserved' | 'sold' | 'removed';
 export type ListingCondition = 'new' | 'like_new' | 'good' | 'fair';
 export type TransactionStatus = 'pending' | 'held' | 'released' | 'refunded' | 'failed';
 export type ReportTargetType = 'listing' | 'user';
@@ -37,9 +37,14 @@ export interface Listing {
   status: ListingStatus;
   images: string[];
   created_at: string;
-  seller?: { id: string; name: string; is_verified: boolean };
+  seller?: { id: string; name: string; is_verified: boolean; created_at?: string };
+  category?: { id: string; name: string };
   primary_image?: string | null;
   view_count?: number;
+  meetup_ok?: boolean;
+  delivery_ok?: boolean;
+  delivery_fee?: number | null;
+  size?: string | null;
 }
 
 export interface Message {

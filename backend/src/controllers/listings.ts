@@ -16,6 +16,18 @@ const createSchema = z.object({
   condition: z.enum(['new', 'like_new', 'good', 'fair']),
   category_id: z.string().uuid(),
   location: z.string().min(2),
+  meetup_ok: z
+    .union([z.boolean(), z.enum(['true', 'false', 'on', 'off', '1', '0'])])
+    .optional()
+    .transform((v) =>
+      v === undefined ? true : v === true || v === 'true' || v === 'on' || v === '1'
+    ),
+  delivery_ok: z
+    .union([z.boolean(), z.enum(['true', 'false', 'on', 'off', '1', '0'])])
+    .optional()
+    .transform((v) => v === true || v === 'true' || v === 'on' || v === '1'),
+  delivery_fee: z.coerce.number().nonnegative().optional(),
+  size: z.string().max(40).optional(),
 });
 
 const updateSchema = z.object({
@@ -25,7 +37,11 @@ const updateSchema = z.object({
   condition: z.enum(['new', 'like_new', 'good', 'fair']).optional(),
   category_id: z.string().uuid().optional(),
   location: z.string().min(2).optional(),
-  status: z.enum(['active', 'sold', 'removed']).optional(),
+  status: z.enum(['active', 'reserved', 'sold', 'removed']).optional(),
+  meetup_ok: z.boolean().optional(),
+  delivery_ok: z.boolean().optional(),
+  delivery_fee: z.coerce.number().nonnegative().nullable().optional(),
+  size: z.string().max(40).nullable().optional(),
 });
 
 export async function createListing(req: AuthRequest, res: Response) {
@@ -64,7 +80,16 @@ export async function createListing(req: AuthRequest, res: Response) {
 
   const listing = await prisma.listing.create({
     data: {
-      ...parsed.data,
+      title: parsed.data.title,
+      description: parsed.data.description,
+      price: parsed.data.price,
+      condition: parsed.data.condition,
+      category_id: parsed.data.category_id,
+      location: parsed.data.location,
+      meetup_ok: parsed.data.meetup_ok ?? true,
+      delivery_ok: parsed.data.delivery_ok ?? false,
+      delivery_fee: parsed.data.delivery_ok ? parsed.data.delivery_fee ?? null : null,
+      size: parsed.data.size || null,
       seller_id: req.user.userId,
       images: {
         create: urls.map((url, i) => ({ url, is_primary: i === 0 })),
@@ -72,7 +97,8 @@ export async function createListing(req: AuthRequest, res: Response) {
     },
     include: {
       images: true,
-      seller: { select: { id: true, name: true, is_verified: true } },
+      seller: { select: { id: true, name: true, is_verified: true, created_at: true } },
+        category: { select: { id: true, name: true } },
     },
   });
 
@@ -128,7 +154,8 @@ export async function getListings(req: AuthRequest, res: Response) {
       orderBy,
       include: {
         images: true,
-        seller: { select: { id: true, name: true, is_verified: true } },
+        seller: { select: { id: true, name: true, is_verified: true, created_at: true } },
+        category: { select: { id: true, name: true } },
       },
     }),
   ]);
@@ -145,8 +172,8 @@ export async function getListingById(req: AuthRequest, res: Response) {
     where: { id },
     include: {
       images: true,
-      seller: { select: { id: true, name: true, is_verified: true } },
-      category: true,
+      seller: { select: { id: true, name: true, is_verified: true, created_at: true } },
+      category: { select: { id: true, name: true } },
     },
   });
   if (!listing || listing.status === 'removed') {
@@ -163,8 +190,8 @@ export async function getListingById(req: AuthRequest, res: Response) {
     data: { view_count: { increment: 1 } },
     include: {
       images: true,
-      seller: { select: { id: true, name: true, is_verified: true } },
-      category: true,
+      seller: { select: { id: true, name: true, is_verified: true, created_at: true } },
+      category: { select: { id: true, name: true } },
     },
   });
 
@@ -213,6 +240,10 @@ export async function updateListing(req: AuthRequest, res: Response) {
   if (parsed.data.condition) data.condition = parsed.data.condition;
   if (parsed.data.location) data.location = parsed.data.location;
   if (parsed.data.status) data.status = parsed.data.status;
+  if (parsed.data.meetup_ok !== undefined) data.meetup_ok = parsed.data.meetup_ok;
+  if (parsed.data.delivery_ok !== undefined) data.delivery_ok = parsed.data.delivery_ok;
+  if (parsed.data.delivery_fee !== undefined) data.delivery_fee = parsed.data.delivery_fee;
+  if (parsed.data.size !== undefined) data.size = parsed.data.size;
   if (parsed.data.category_id) {
     const category = await prisma.category.findUnique({
       where: { id: parsed.data.category_id },
@@ -226,7 +257,8 @@ export async function updateListing(req: AuthRequest, res: Response) {
     data,
     include: {
       images: true,
-      seller: { select: { id: true, name: true, is_verified: true } },
+      seller: { select: { id: true, name: true, is_verified: true, created_at: true } },
+        category: { select: { id: true, name: true } },
     },
   });
 
@@ -246,7 +278,8 @@ export async function deleteListing(req: AuthRequest, res: Response) {
     data: { status: 'removed' },
     include: {
       images: true,
-      seller: { select: { id: true, name: true, is_verified: true } },
+      seller: { select: { id: true, name: true, is_verified: true, created_at: true } },
+        category: { select: { id: true, name: true } },
     },
   });
 

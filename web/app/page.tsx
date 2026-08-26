@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { Alert } from '@/components/ui/Alert';
 import { CATEGORY_PHOTOS, DEMO_CATALOG, UI_PHOTOS, type CatalogItem } from '@/lib/uiPhotos';
+import { getRecent, recentAsListing } from '@/lib/recent';
 
 const FALLBACK_CATEGORIES = [
   'Electronics',
@@ -58,6 +59,7 @@ export default function HomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [recent, setRecent] = useState<Listing[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -70,6 +72,7 @@ export default function HomePage() {
       })
       .catch((e) => setError(e.message || 'Failed to load'))
       .finally(() => setLoading(false));
+    setRecent(getRecent().slice(0, 4).map(recentAsListing));
   }, []);
 
   function onSearch(e: FormEvent) {
@@ -353,6 +356,24 @@ export default function HomePage() {
                       />
                     </Reveal>
                   ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {recent.length > 0 && (
+        <section className="section-pad border-t border-border">
+          <div className="page-shell">
+            <Reveal>
+              <div className="mb-8">
+                <p className="eyebrow">You</p>
+                <h2 className="mt-2 font-display text-display font-medium">Recently viewed</h2>
+              </div>
+            </Reveal>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              {recent.map((l) => (
+                <ListingCard key={l.id} listing={l} size="compact" />
+              ))}
             </div>
           </div>
         </section>

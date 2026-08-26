@@ -67,9 +67,17 @@ export function Navbar() {
           <Link href="/listings?sort=newest" className={link}>
             New
           </Link>
+          <Link href="/saved" className={link}>
+            Saved
+          </Link>
           {!isLoading && user?.role === 'seller' && (
             <Link href="/sell" className={link}>
               Sell
+            </Link>
+          )}
+          {!isLoading && (user?.role === 'seller' || user?.role === 'admin') && (
+            <Link href="/dashboard" className={link}>
+              Dashboard
             </Link>
           )}
           {!isLoading && user && (
@@ -173,6 +181,7 @@ export function Navbar() {
           <nav className="flex flex-col gap-3 text-sm font-semibold uppercase tracking-[0.16em]" aria-label="Mobile">
             <Link href="/listings">Shop</Link>
             <Link href="/listings?sort=newest">New arrivals</Link>
+            <Link href="/saved">Saved</Link>
             {user && <Link href="/inbox">Inbox</Link>}
             {user && <Link href="/orders">Orders</Link>}
             {user?.role === 'seller' && <Link href="/sell">Sell</Link>}

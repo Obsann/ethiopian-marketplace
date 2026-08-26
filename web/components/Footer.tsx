@@ -39,6 +39,11 @@ export function Footer() {
                 List an item
               </Link>
             </li>
+            <li>
+              <Link href="/saved" className="hover:text-white">
+                Saved
+              </Link>
+            </li>
           </ul>
         </div>
         <div>
@@ -76,6 +81,21 @@ export function Footer() {
                 </li>
               </>
             )}
+            <li>
+              <Link href="/legal/faq" className="hover:text-white">
+                FAQ
+              </Link>
+            </li>
+            <li>
+              <Link href="/legal/terms" className="hover:text-white">
+                Terms
+              </Link>
+            </li>
+            <li>
+              <Link href="/legal/privacy" className="hover:text-white">
+                Privacy
+              </Link>
+            </li>
           </ul>
         </div>
       </div>

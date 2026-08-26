@@ -28,6 +28,10 @@ export default function EditListingPage() {
     price: '',
     location: '',
     status: 'active',
+    meetup_ok: true,
+    delivery_ok: false,
+    delivery_fee: '',
+    size: '',
   });
 
   useEffect(() => {
@@ -59,13 +63,17 @@ export default function EditListingPage() {
           price: String(l.price),
           location: l.location,
           status: l.status,
+          meetup_ok: l.meetup_ok !== false,
+          delivery_ok: Boolean(l.delivery_ok),
+          delivery_fee: l.delivery_fee != null ? String(l.delivery_fee) : '',
+          size: l.size || '',
         });
       })
       .catch((e) => setError(e instanceof Error ? e.message : 'Could not load listing'))
       .finally(() => setLoading(false));
   }, [id, token, user, router]);
 
-  function update(key: string, value: string) {
+  function update(key: string, value: string | boolean) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
@@ -86,6 +94,10 @@ export default function EditListingPage() {
           price: Number(form.price),
           location: form.location,
           status: form.status,
+          meetup_ok: form.meetup_ok,
+          delivery_ok: form.delivery_ok,
+          delivery_fee: form.delivery_ok && form.delivery_fee ? Number(form.delivery_fee) : null,
+          size: form.size.trim() || null,
         }),
       });
       router.push(`/listings/${id}`);
@@ -189,6 +201,41 @@ export default function EditListingPage() {
           onChange={(e) => update('location', e.target.value)}
           required
         />
+        <Input
+          id="edit-size"
+          label="Size (optional)"
+          value={form.size}
+          onChange={(e) => update('size', e.target.value)}
+          placeholder="M, 42…"
+        />
+        <label className="flex items-start gap-2 text-sm text-ink">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={form.meetup_ok}
+            onChange={(e) => update('meetup_ok', e.target.checked)}
+          />
+          Meetup in a public place is OK
+        </label>
+        <label className="flex items-start gap-2 text-sm text-ink">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={form.delivery_ok}
+            onChange={(e) => update('delivery_ok', e.target.checked)}
+          />
+          Delivery available
+        </label>
+        {form.delivery_ok && (
+          <Input
+            id="edit-delivery-fee"
+            label="Delivery fee (ETB)"
+            type="number"
+            min={0}
+            value={form.delivery_fee}
+            onChange={(e) => update('delivery_fee', e.target.value)}
+          />
+        )}
         <div className="space-y-1.5">
           <label
             htmlFor="edit-status"
@@ -203,6 +250,7 @@ export default function EditListingPage() {
             onChange={(e) => update('status', e.target.value)}
           >
             <option value="active">Active</option>
+            <option value="reserved">Reserved</option>
             <option value="sold">Sold</option>
             <option value="removed">Removed</option>
           </select>

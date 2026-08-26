@@ -11,6 +11,7 @@ import paymentsRoutes from './routes/payments';
 import reportsRoutes from './routes/reports';
 import verificationsRoutes from './routes/verifications';
 import healthRoutes from './routes/health';
+import marketplaceRoutes from './routes/marketplace';
 import { errorHandler } from './middleware/errorHandler';
 import { responseTimeLogger } from './middleware/responseTime';
 import { setupSocket } from './socket';
@@ -64,6 +65,7 @@ app.use('/api', chatRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/verifications', verificationsRoutes);
+app.use('/api', marketplaceRoutes);
 
 /** Root is the API host — send browsers to the Next.js app. */
 app.get('/', (req, res) => {
