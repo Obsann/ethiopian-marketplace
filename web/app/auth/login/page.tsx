@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { postLoginPath } from '@/lib/postLoginPath';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
@@ -33,8 +34,8 @@ function LoginForm() {
     setLoading(true);
     setFormError('');
     try {
-      await login(email, password);
-      router.push(params.get('next') || '/');
+      const user = await login(email, password);
+      router.push(postLoginPath(user.role, params.get('next')));
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Login failed');
     } finally {

@@ -17,8 +17,8 @@ interface AuthContextValue {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  loginWithToken: (token: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
+  loginWithToken: (token: string) => Promise<User>;
   register: (payload: {
     name: string;
     email: string;
@@ -70,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(res.data.token);
     setUser(res.data.user);
     void syncSavedToApi(res.data.token);
+    return res.data.user;
   }, []);
 
   const loginWithToken = useCallback(async (nextToken: string) => {
@@ -80,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(nextToken);
     setUser(res.data.user);
     void syncSavedToApi(nextToken);
+    return res.data.user;
   }, []);
 
   const register = useCallback(

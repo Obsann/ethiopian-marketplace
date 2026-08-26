@@ -79,6 +79,11 @@ export default function AccountPage() {
             <Link href="/inbox" className="hover:text-ink">
               Inbox
             </Link>
+            {user.role === 'admin' && (
+              <Link href="/admin" className="hover:text-ink">
+                Admin
+              </Link>
+            )}
             {(user.role === 'seller' || user.role === 'admin') && (
               <Link href={`/sellers/${user.id}`} className="hover:text-ink">
                 Public profile

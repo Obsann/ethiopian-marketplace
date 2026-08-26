@@ -74,3 +74,7 @@ services:
         sync: false
       - key: GOOGLE_CALLBACK_URL
         sync: false
+      # Hackathon/demo: set "true" then redeploy so API boot upserts admin@marketplace.et and other seed users.
+      # Listings are created only when the catalog is empty. Leave false after the demo if you do not want passwords reset on restart.
+      - key: FORCE_SEED
+        sync: false

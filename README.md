@@ -171,13 +171,25 @@ Password for every seeded account: `Password123!`
 
 | Role | Email | Password |
 |------|-------|----------|
-| Buyer | sara@buyer.et | Password123! |
-| Seller | abebe@seller.et | Password123! |
 | Admin | admin@marketplace.et | Password123! |
+| Seller | abebe@seller.et | Password123! |
+| Seller | tigist@seller.et | Password123! |
+| Buyer | sara@buyer.et | Password123! |
+| Buyer | yonas@buyer.et | Password123! |
 
-Also seeded: `tigist@seller.et`, `dawit@seller.et`, `yonas@buyer.et`, `hanna@buyer.et` (same password).
+`npm run seed` **deletes those sellers' listings** and recreates demo data. It refuses to run when `NODE_ENV=production` unless `FORCE_SEED=true`.
 
-`npm run seed` **deletes existing marketplace rows** and recreates demo data. It refuses to run when `NODE_ENV=production` unless `FORCE_SEED=true`.
+**Empty Render DB (login 401):** seed was never applied on production Postgres. Register cannot create an admin (roles are `buyer`/`seller` only, and email must be verified before login). To upsert the table above on Render:
+
+1. [Render Dashboard](https://dashboard.render.com) → service **suqet-api** → **Environment**
+2. Add `FORCE_SEED` = `true` (no quotes)
+3. **Save Changes** → **Manual Deploy** (or restart the service)
+4. Wait until logs show `FORCE_SEED=true — upserting demo users` and `Seed complete` (or `Seed users upserted`)
+5. Log in at the Vercel app as `admin@marketplace.et` / `Password123!` — you should land on `/admin`
+
+Start command stays `npx prisma migrate deploy && node dist/server.js`. Migrate still runs first; `FORCE_SEED=true` makes the API upsert users on boot and create listings **only if the catalog is empty**. You can set `FORCE_SEED` back to `false` after the first successful boot if you do not want seed passwords refreshed on every restart.
+
+One-off (Render Shell, from `backend/`): `FORCE_SEED=true npx tsx prisma/seed.ts` — this **does** recreate Abebe/Tigist demo listings.
 
 ### 1. Postgres
 
@@ -293,6 +305,7 @@ Split hosting:
 | `GOOGLE_CLIENT_ID` | for Google | Web client ID from Google Cloud Console |
 | `GOOGLE_CLIENT_SECRET` | for Google | Web client secret (API only — never in `web/`) |
 | `GOOGLE_CALLBACK_URL` | for Google | Must match Console redirect URI exactly, e.g. `https://suqet-api.onrender.com/api/auth/google/callback` |
+| `FORCE_SEED` | hackathon/demo | Set `true` then redeploy so boot upserts demo users (see **Empty Render DB** above). Leave unset/`false` in a real production DB. |
 
 Chapa Test webhook URL in the dashboard:
 

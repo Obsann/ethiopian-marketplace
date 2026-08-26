@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { postLoginPath } from '@/lib/postLoginPath';
 import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
 import type { User } from '@/types';
@@ -26,7 +27,7 @@ function VerifyEmailInner() {
       body: JSON.stringify({ token }),
     })
       .then((res) => loginWithToken(res.data.token))
-      .then(() => router.replace('/'))
+      .then((user) => router.replace(postLoginPath(user.role)))
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : 'Could not confirm email');
       });

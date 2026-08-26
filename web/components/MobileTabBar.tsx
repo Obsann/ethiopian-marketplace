@@ -45,8 +45,8 @@ export function MobileTabBar() {
           Inbox
         </Link>
         <Link
-          href={user ? '/account' : '/auth/login'}
-          className={`${item} ${active('/account') || active('/auth') ? 'text-ink' : 'text-muted'}`}
+          href={user?.role === 'admin' ? '/admin' : user ? '/account' : '/auth/login'}
+          className={`${item} ${active('/account') || active('/admin') || active('/auth') ? 'text-ink' : 'text-muted'}`}
         >
           <User className="h-5 w-5" aria-hidden />
           You

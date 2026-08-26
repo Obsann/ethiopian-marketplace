@@ -3,13 +3,14 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Flag, ShieldCheck } from 'lucide-react';
+import { Flag, LayoutGrid, ShieldCheck } from 'lucide-react';
 import { api, getApiUrl } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
+import type { Listing } from '@/types';
 
 interface ReportRow {
   id: string;
@@ -75,9 +76,10 @@ function KycThumb({ path, token, alt }: { path: string; token: string; alt: stri
 export default function AdminPage() {
   const { user, token, isLoading } = useAuth();
   const router = useRouter();
-  const [tab, setTab] = useState<'reports' | 'verifications'>('reports');
+  const [tab, setTab] = useState<'reports' | 'verifications' | 'listings'>('reports');
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [verifications, setVerifications] = useState<VerificationRow[]>([]);
+  const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const isAdmin = user?.role === 'admin';
@@ -97,12 +99,14 @@ export default function AdminPage() {
     if (!user || !isAdmin) return;
     setLoading(true);
     try {
-      const [r, v] = await Promise.all([
+      const [r, v, l] = await Promise.all([
         api<{ items: ReportRow[] }>('/api/reports', { token: token ?? undefined }),
         api<VerificationRow[]>('/api/verifications/pending', { token: token ?? undefined }),
+        api<{ items: Listing[] }>('/api/listings?limit=20', { token: token ?? undefined }),
       ]);
       setReports(r.data.items);
       setVerifications(v.data);
+      setListings(l.data.items);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
@@ -136,6 +140,16 @@ export default function AdminPage() {
     setVerifications((rows) => rows.filter((v) => v.id !== id));
   }
 
+  async function removeListing(id: string) {
+    if (!user) return;
+    await api(`/api/listings/${id}`, {
+      method: 'PUT',
+      token: token ?? undefined,
+      body: JSON.stringify({ status: 'removed' }),
+    });
+    setListings((rows) => rows.filter((l) => l.id !== id));
+  }
+
   if (isLoading || !isAdmin || loading) {
     return (
       <div className="page-shell flex justify-center pt-24 sm:pt-28 pb-16">
@@ -151,8 +165,20 @@ export default function AdminPage() {
           <p className="eyebrow text-white/45">Moderation</p>
           <h1 className="mt-3 font-display text-display font-medium">Admin</h1>
           <p className="mt-3 max-w-lg text-sm text-white/60">
-            Review reports and seller verifications
+            You&apos;re signed in as admin{user?.email ? ` (${user.email})` : ''}. Review reports,
+            seller KYC, and live listings.
           </p>
+          <div className="mt-5 flex flex-wrap gap-4 text-xs font-semibold uppercase tracking-[0.14em] text-white/70">
+            <Link href="/listings" className="hover:text-white">
+              Browse shop
+            </Link>
+            <Link href="/dashboard" className="hover:text-white">
+              Dashboard
+            </Link>
+            <Link href="/account" className="hover:text-white">
+              Account
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -166,6 +192,12 @@ export default function AdminPage() {
             onClick={() => setTab('verifications')}
           >
             Pending verifications
+          </Button>
+          <Button
+            variant={tab === 'listings' ? 'primary' : 'outline'}
+            onClick={() => setTab('listings')}
+          >
+            Live listings
           </Button>
         </div>
 
@@ -236,6 +268,41 @@ export default function AdminPage() {
                     <Button onClick={() => reviewVerification(v.id, 'approved')}>Approve</Button>
                     <Button variant="danger" onClick={() => reviewVerification(v.id, 'rejected')}>
                       Reject
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ))}
+
+        {tab === 'listings' &&
+          (listings.length === 0 ? (
+            <EmptyState
+              icon={LayoutGrid}
+              title="No live listings"
+              description="When the catalog is seeded or sellers post items, they will show here to remove."
+            />
+          ) : (
+            <ul className="space-y-3">
+              {listings.map((l) => (
+                <li key={l.id} className="border border-border bg-surface p-5">
+                  <p className="text-sm font-medium text-ink">
+                    <Link href={`/listings/${l.id}`} className="transition hover:underline">
+                      {l.title}
+                    </Link>
+                    <span className="font-normal text-muted">
+                      {' '}
+                      · {l.price.toLocaleString()} ETB
+                      {l.seller?.name ? ` · ${l.seller.name}` : ''}
+                    </span>
+                  </p>
+                  <p className="mt-2 text-sm text-muted">{l.location}</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Link href={`/listings/${l.id}/edit`}>
+                      <Button variant="outline">Edit</Button>
+                    </Link>
+                    <Button variant="danger" onClick={() => removeListing(l.id)}>
+                      Remove
                     </Button>
                   </div>
                 </li>

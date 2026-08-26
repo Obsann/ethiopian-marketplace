@@ -80,6 +80,11 @@ export function Navbar() {
               Dashboard
             </Link>
           )}
+          {!isLoading && user?.role === 'admin' && (
+            <Link href="/admin" className={link}>
+              Admin
+            </Link>
+          )}
           {!isLoading && user && (
             <Link href="/inbox" className={link}>
               Inbox
@@ -185,7 +190,7 @@ export function Navbar() {
             {user && <Link href="/inbox">Inbox</Link>}
             {user && <Link href="/orders">Orders</Link>}
             {user?.role === 'seller' && <Link href="/sell">Sell</Link>}
-            {user?.role === 'seller' && <Link href="/dashboard">Dashboard</Link>}
+            {(user?.role === 'seller' || user?.role === 'admin') && <Link href="/dashboard">Dashboard</Link>}
             {user?.role === 'admin' && <Link href="/admin">Admin</Link>}
             {user ? <Link href="/account">Account</Link> : <Link href="/auth/login">Log in</Link>}
           </nav>

@@ -98,22 +98,34 @@ process.on('uncaughtException', (err) => {
 });
 
 if (require.main === module) {
-  server.listen(PORT, () => {
-    console.log(`API listening on http://localhost:${PORT}`);
-    void (async () => {
+  void (async () => {
+    if (process.env.FORCE_SEED === 'true') {
       try {
-        await prisma.passwordResetToken.deleteMany({ where: { expires_at: { lt: new Date() } } });
-        await prisma.emailVerificationToken.deleteMany({ where: { expires_at: { lt: new Date() } } });
-        await prisma.oAuthExchangeCode.deleteMany({ where: { expires_at: { lt: new Date() } } });
+        const { runDemoSeed } = await import('./utils/demoSeed');
+        console.log('[startup] FORCE_SEED=true — upserting demo users (listings only if catalog is empty)');
+        await runDemoSeed({ resetListings: false });
       } catch (err) {
-        const raw = err instanceof Error ? err.message : String(err);
-        const brief = /Can't reach database server/i.test(raw)
-          ? "Can't reach database at localhost:5432 - start Postgres (docker compose up -d) or fix DATABASE_URL"
-          : raw.split(/\r?\n/).find((line) => line.trim().length > 0) ?? 'unknown';
-        console.warn(`[startup] token purge skipped: ${brief}`);
+        console.error('[startup] FORCE_SEED failed', err);
       }
-    })();
-  });
+    }
+
+    server.listen(PORT, () => {
+      console.log(`API listening on http://localhost:${PORT}`);
+      void (async () => {
+        try {
+          await prisma.passwordResetToken.deleteMany({ where: { expires_at: { lt: new Date() } } });
+          await prisma.emailVerificationToken.deleteMany({ where: { expires_at: { lt: new Date() } } });
+          await prisma.oAuthExchangeCode.deleteMany({ where: { expires_at: { lt: new Date() } } });
+        } catch (err) {
+          const raw = err instanceof Error ? err.message : String(err);
+          const brief = /Can't reach database server/i.test(raw)
+            ? "Can't reach database at localhost:5432 - start Postgres (docker compose up -d) or fix DATABASE_URL"
+            : raw.split(/\r?\n/).find((line) => line.trim().length > 0) ?? 'unknown';
+          console.warn(`[startup] token purge skipped: ${brief}`);
+        }
+      })();
+    });
+  })();
 }
 
 export { app, server };
