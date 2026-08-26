@@ -9,26 +9,38 @@ export interface AuthRequest extends Request {
   user?: AuthTokenPayload;
 }
 
+function attachUserFromToken(req: AuthRequest): 'ok' | 'missing' | 'invalid' | 'misconfigured' {
+  const token = readSessionToken(req);
+  if (!token) return 'missing';
+  const secret = process.env.JWT_SECRET;
+  if (!secret) return 'misconfigured';
+  try {
+    req.user = jwt.verify(token, secret) as AuthTokenPayload;
+    return 'ok';
+  } catch {
+    return 'invalid';
+  }
+}
+
 export function authenticate(
   req: AuthRequest,
   res: Response,
   next: NextFunction
 ): Response | void {
-  const token = readSessionToken(req);
-  if (!token) {
+  const result = attachUserFromToken(req);
+  if (result === 'misconfigured') {
+    return sendError(res, 'Server misconfiguration', 500);
+  }
+  if (result !== 'ok') {
     return sendError(res, messages.unauthorized, 401);
   }
-  try {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      return sendError(res, 'Server misconfiguration', 500);
-    }
-    const payload = jwt.verify(token, secret) as AuthTokenPayload;
-    req.user = payload;
-    next();
-  } catch {
-    return sendError(res, messages.unauthorized, 401);
-  }
+  next();
+}
+
+/** Session probe: missing/expired token is signed-out, not an error. */
+export function optionalAuthenticate(req: AuthRequest, _res: Response, next: NextFunction): void {
+  attachUserFromToken(req);
+  next();
 }
 
 export function requireRoles(...roles: UserRole[]) {

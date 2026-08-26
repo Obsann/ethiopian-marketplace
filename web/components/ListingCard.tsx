@@ -1,7 +1,9 @@
-import Image from 'next/image';
+'use client';
+
 import Link from 'next/link';
 import { BadgeCheck, Heart } from 'lucide-react';
 import { Listing } from '@/types';
+import { SafeImage } from '@/components/SafeImage';
 
 export function ListingCard({
   listing,
@@ -34,7 +36,7 @@ export function ListingCard({
             size === 'featured' ? 'aspect-[3/4]' : size === 'compact' ? 'aspect-[3/4]' : 'aspect-[4/5]'
           }`}
         >
-          <Image
+          <SafeImage
             src={primary}
             alt={listing.title}
             fill
@@ -45,7 +47,7 @@ export function ListingCard({
             }`}
           />
           {secondary && (
-            <Image
+            <SafeImage
               src={secondary}
               alt=""
               fill

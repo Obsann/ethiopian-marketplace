@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as authController from '../controllers/auth';
-import { authenticate } from '../middleware/auth';
+import { authenticate, optionalAuthenticate } from '../middleware/auth';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { authRateLimiter } from '../middleware/rateLimit';
 
@@ -17,7 +17,7 @@ router.post('/resend-verification', authRateLimiter, asyncHandler(authController
 router.get('/google', authRateLimiter, asyncHandler(authController.startGoogle));
 router.get('/google/callback', asyncHandler(authController.googleCallback));
 router.post('/oauth/exchange', authRateLimiter, asyncHandler(authController.exchangeOAuth));
-router.get('/me', authenticate, asyncHandler(authController.me));
+router.get('/me', optionalAuthenticate, asyncHandler(authController.me));
 router.patch('/me', authenticate, asyncHandler(authController.updateMe));
 
 export default router;

@@ -512,8 +512,8 @@ export async function updateMe(req: AuthRequest, res: Response) {
 }
 
 export async function me(req: AuthRequest, res: Response) {
-  if (!req.user) return sendError(res, 'Unauthorized', 401);
+  if (!req.user) return sendSuccess(res, { user: null });
   const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
-  if (!user) return sendError(res, 'User not found', 404);
+  if (!user) return sendSuccess(res, { user: null });
   return sendSuccess(res, { user: publicUser(user) });
 }

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Package, MessageSquare, HandCoins } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -12,6 +11,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
+import { SafeImage } from '@/components/SafeImage';
 
 interface DashboardData {
   stats: {
@@ -203,7 +203,7 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-3">
                           <div className="relative h-10 w-10 overflow-hidden border border-border bg-paper">
                             {l.image && (
-                              <Image src={l.image} alt="" fill className="object-cover" sizes="40px" />
+                              <SafeImage src={l.image} alt="" fill className="object-cover" sizes="40px" />
                             )}
                           </div>
                           <Link
