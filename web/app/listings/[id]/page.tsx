@@ -28,14 +28,17 @@ import { SafeImage } from '@/components/SafeImage';
 import { ListingCard } from '@/components/ListingCard';
 import { pushRecent, getRecent, recentAsListing } from '@/lib/recent';
 import { isSaved, toggleSaved } from '@/lib/saved';
+import { demoListingById, isDemoListingId, similarDemoListings } from '@/lib/demoCatalog';
 
 type OfferRow = { id: string; amount: number; created_at: string; sender: { id: string; name: string } };
 
 function ListingDetail() {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ id: string }>();
   const { user, token } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const rawId = params?.id;
+  const id = decodeURIComponent(Array.isArray(rawId) ? String(rawId[0] ?? '') : String(rawId || ''));
   const [listing, setListing] = useState<Listing | null>(null);
   const [similar, setSimilar] = useState<Listing[]>([]);
   const [offers, setOffers] = useState<OfferRow[]>([]);
@@ -52,6 +55,24 @@ function ListingDetail() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
+    if (!id) return;
+    setSaved(isSaved(id));
+    if (isDemoListingId(id)) {
+      const demo = demoListingById(id);
+      if (!demo) {
+        setError('Listing not found');
+        setListing(null);
+        setLoading(false);
+        return;
+      }
+      setListing(demo);
+      setSimilar(similarDemoListings(demo).slice(0, 6));
+      setError('');
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError('');
     api<Listing>(`/api/listings/${id}`)
       .then((r) => {
         setListing(r.data);
@@ -63,13 +84,15 @@ function ListingDetail() {
             .map(recentAsListing)
         );
       })
-      .catch((e) => setError(e.message))
+      .catch((e) => {
+        setListing(null);
+        setError(e.message);
+      })
       .finally(() => setLoading(false));
-    setSaved(isSaved(id));
   }, [id]);
 
   useEffect(() => {
-    if (!listing) return;
+    if (!listing || isDemoListingId(listing.id)) return;
     api<Listing[]>(`/api/listings/${id}/similar`)
       .then((r) => setSimilar(r.data))
       .catch(() => {});
@@ -178,11 +201,14 @@ function ListingDetail() {
   }
 
   const images = listing.images?.length ? listing.images : ['/placeholder-listing.svg'];
-  const isOwn = user?.id === listing.seller_id;
-  const canBuy = listing.status === 'active' && !isOwn;
+  const isDemo = isDemoListingId(listing.id);
+  const isOwn = !isDemo && user?.id === listing.seller_id;
+  const canBuy = listing.status === 'active' && !isOwn && !isDemo;
   const fromInbox = Boolean(searchParams.get('with'));
   const peerId = searchParams.get('with') || listing.seller_id;
-  const showChat = Boolean(user && (listing.status === 'active' || listing.status === 'reserved' || fromInbox));
+  const showChat = Boolean(
+    !isDemo && user && (listing.status === 'active' || listing.status === 'reserved' || fromInbox)
+  );
   const noteIsSuccess =
     note.includes('sent') || note.includes('Thanks') || note.includes('submitted') || note.includes('Marked');
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
@@ -204,7 +230,7 @@ function ListingDetail() {
           {listing.category && (
             <>
               <span>/</span>
-              <Link href={`/listings?category_id=${listing.category.id}`} className="hover:text-ink">
+              <Link href={`/listings?category_id=${listing.category.id}&category=${encodeURIComponent(listing.category.name)}`} className="hover:text-ink">
                 {listing.category.name}
               </Link>
             </>
@@ -272,7 +298,7 @@ function ListingDetail() {
                   <MapPin className="h-3.5 w-3.5" aria-hidden />
                   {listing.location}
                 </a>
-                {listing.seller && (
+                {listing.seller && !isDemo && (
                   <Link href={`/sellers/${listing.seller.id}`} className="inline-flex items-center gap-1.5 hover:text-ink">
                     {listing.seller.is_verified && (
                       <BadgeCheck className="h-3.5 w-3.5 text-accent-600" aria-hidden />
@@ -281,8 +307,26 @@ function ListingDetail() {
                     {listing.seller.is_verified ? ' · Verified' : ''}
                   </Link>
                 )}
+                {isDemo && (
+                  <span className="inline-flex items-center gap-1.5">Sample listing</span>
+                )}
               </div>
             </Reveal>
+
+            {isDemo && (
+              <div className="mt-6">
+                <Alert tone="info">
+                  This is a sample listing so you can preview the shop. It is not for sale.{' '}
+                  <Link href="/listings" className="font-semibold underline">
+                    Browse the collection
+                  </Link>
+                  {' · '}
+                  <Link href="/auth/register" className="font-semibold underline">
+                    Start selling
+                  </Link>
+                </Alert>
+              </div>
+            )}
 
             <div className="mt-4 space-y-2 rounded-xl border border-border bg-surface p-4 text-sm text-muted">
               <p>
@@ -413,7 +457,7 @@ function ListingDetail() {
               </div>
             )}
 
-            {!isOwn && (
+            {!isOwn && !isDemo && (
               <button
                 type="button"
                 onClick={reportListing}
@@ -430,6 +474,8 @@ function ListingDetail() {
       <div className="page-shell space-y-8 pb-20">
         {showChat ? (
           <ListingChat listingId={listing.id} sellerId={listing.seller_id} peerId={peerId} />
+        ) : isDemo ? (
+          <Alert tone="info">Sample listings cannot be purchased or messaged. List your own item to sell on SuqET.</Alert>
         ) : listing.status !== 'active' && listing.status !== 'reserved' && !isOwn ? (
           <Alert tone="info">
             This listing is no longer available.{' '}

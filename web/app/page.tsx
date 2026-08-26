@@ -13,43 +13,12 @@ import { SafeImage } from '@/components/SafeImage';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { Alert } from '@/components/ui/Alert';
-import { CATEGORY_PHOTOS, DEMO_CATALOG, UI_PHOTOS, type CatalogItem } from '@/lib/uiPhotos';
+import { CATEGORY_PHOTOS, DEMO_CATALOG, UI_PHOTOS } from '@/lib/uiPhotos';
+import { catalogAsListing, demoListingPath, FALLBACK_CATEGORIES } from '@/lib/demoCatalog';
 import { getRecent, recentAsListing } from '@/lib/recent';
-
-const FALLBACK_CATEGORIES = [
-  'Electronics',
-  'Clothing',
-  'Furniture',
-  'Books',
-  'Vehicles',
-  'Kitchen',
-  'Tools',
-  'Other',
-].map((name) => ({ id: name, name }));
 
 function categoryPhoto(name: string) {
   return CATEGORY_PHOTOS[name] || UI_PHOTOS.hero;
-}
-
-function catalogAsListing(item: CatalogItem, index: number): Listing {
-  return {
-    id: `demo-${index}`,
-    seller_id: 'demo',
-    title: item.title,
-    description: '',
-    price: item.price,
-    condition: item.condition,
-    category_id: item.category,
-    location: item.location,
-    status: 'active',
-    images: [item.image],
-    created_at: '',
-    primary_image: item.image,
-  };
-}
-
-function catalogHref(item: CatalogItem) {
-  return `/listings?query=${encodeURIComponent(item.title)}`;
 }
 
 export default function HomePage() {
@@ -62,16 +31,13 @@ export default function HomePage() {
   const [recent, setRecent] = useState<Listing[]>([]);
 
   useEffect(() => {
-    Promise.all([
-      api<{ items: Listing[] }>('/api/listings?limit=12&sort=newest'),
-      api<Category[]>('/api/listings/categories'),
-    ])
-      .then(([listRes, catRes]) => {
-        setListings(listRes.data.items);
-        setCategories(catRes.data);
-      })
+    api<{ items: Listing[] }>('/api/listings?limit=12&sort=newest')
+      .then((listRes) => setListings(listRes.data.items))
       .catch((e) => setError(e.message || 'Failed to load'))
       .finally(() => setLoading(false));
+    api<Category[]>('/api/listings/categories')
+      .then((catRes) => setCategories(catRes.data))
+      .catch(() => undefined);
     setRecent(getRecent().slice(0, 4).map(recentAsListing));
   }, []);
 
@@ -179,7 +145,7 @@ export default function HomePage() {
             {cats.map((cat, i) => (
               <Link
                 key={cat.id}
-                href={`/listings?category_id=${cat.id}`}
+                href={`/listings?category_id=${encodeURIComponent(cat.id)}&category=${encodeURIComponent(cat.name)}`}
                 className="group relative block min-w-[70vw] snap-start overflow-hidden rounded-xl bg-ink sm:min-w-[18rem]"
               >
                 <div className="relative aspect-[4/5]">
@@ -236,20 +202,15 @@ export default function HomePage() {
             </div>
           )}
 
-          {!loading && featured.length === 0 && !error && (
+          {!loading && featured.length === 0 && (
             <div className="grid gap-4 lg:grid-cols-12 lg:gap-6">
               <Reveal className="lg:col-span-7" delayMs={40}>
-                <ListingCard
-                  listing={catalogAsListing(DEMO_CATALOG[0], 0)}
-                  href={catalogHref(DEMO_CATALOG[0])}
-                  priority
-                  size="featured"
-                />
+                <ListingCard listing={catalogAsListing(DEMO_CATALOG[0], 0)} href={demoListingPath(0)} priority size="featured" />
               </Reveal>
               <div className="grid gap-4 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-1 lg:gap-6">
                 {DEMO_CATALOG.slice(1, 3).map((item, i) => (
                   <Reveal key={item.title} delayMs={80 + i * 60}>
-                    <ListingCard listing={catalogAsListing(item, i + 1)} href={catalogHref(item)} />
+                    <ListingCard listing={catalogAsListing(item, i + 1)} href={demoListingPath(i + 1)} />
                   </Reveal>
                 ))}
               </div>
@@ -259,7 +220,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Trending carousel ── */}
-      {(trending.length > 0 || (!loading && listings.length === 0 && !error)) && (
+      {(trending.length > 0 || (!loading && listings.length === 0)) && (
         <section className="section-pad border-y border-border bg-stone-100/80">
           <div className="page-shell">
             <Reveal>
@@ -285,11 +246,7 @@ export default function HomePage() {
                   ))
                 : DEMO_CATALOG.slice(0, 10).map((item, i) => (
                     <div key={item.title} className="min-w-[72vw] sm:min-w-[16rem] lg:min-w-[18rem]">
-                      <ListingCard
-                        listing={catalogAsListing(item, i)}
-                        href={catalogHref(item)}
-                        size="compact"
-                      />
+                      <ListingCard listing={catalogAsListing(item, i)} href={demoListingPath(i)} size="compact" />
                     </div>
                   )))}
             </Carousel>
@@ -327,7 +284,7 @@ export default function HomePage() {
       </section>
 
       {/* ── New arrivals grid ── */}
-      {(arrivals.length > 0 || (!loading && listings.length === 0 && !error)) && (
+      {(arrivals.length > 0 || (!loading && listings.length === 0)) && (
         <section className="section-pad">
           <div className="page-shell">
             <Reveal>
@@ -350,10 +307,7 @@ export default function HomePage() {
                   ))
                 : DEMO_CATALOG.slice(10).map((item, i) => (
                     <Reveal key={item.title} delayMs={i * 40}>
-                      <ListingCard
-                        listing={catalogAsListing(item, i + 10)}
-                        href={catalogHref(item)}
-                      />
+                      <ListingCard listing={catalogAsListing(item, i + 10)} href={demoListingPath(i + 10)} />
                     </Reveal>
                   ))}
             </div>

@@ -11,7 +11,11 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Alert } from '@/components/ui/Alert';
 import { ListingCardSkeleton } from '@/components/ui/Skeleton';
-import { Reveal } from '@/components/Reveal';
+import {
+  FALLBACK_CATEGORIES,
+  filterDemoListings,
+  parseShopSearchParams,
+} from '@/lib/demoCatalog';
 import { getRecent, recentAsListing } from '@/lib/recent';
 
 const selectClass = 'field cursor-pointer';
@@ -44,27 +48,16 @@ function FilterSelect({
 function ListingsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [listings, setListings] = useState<Listing[]>([]);
+  const [liveItems, setLiveItems] = useState<Listing[]>([]);
+  const [liveShopHasItems, setLiveShopHasItems] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadingLive, setLoadingLive] = useState(false);
   const [error, setError] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [recent, setRecent] = useState<Listing[]>([]);
 
-  const filters = useMemo(
-    () => ({
-      query: searchParams.get('query') || '',
-      category_id: searchParams.get('category_id') || '',
-      min_price: searchParams.get('min_price') || '',
-      max_price: searchParams.get('max_price') || '',
-      condition: searchParams.get('condition') || '',
-      location: searchParams.get('location') || '',
-      sort: searchParams.get('sort') || 'newest',
-      page: searchParams.get('page') || '1',
-    }),
-    [searchParams]
-  );
+  const filters = useMemo(() => parseShopSearchParams(searchParams), [searchParams]);
 
   const [queryInput, setQueryInput] = useState(filters.query);
 
@@ -85,34 +78,92 @@ function ListingsContent() {
     const params = new URLSearchParams(searchParams.toString());
     if (value) params.set(key, value);
     else params.delete(key);
+    if (key === 'category_id') params.delete('category');
     if (key !== 'page') params.set('page', '1');
     router.push(`/listings?${params.toString()}`);
   }
 
   useEffect(() => {
-    setLoading(true);
+    let cancelled = false;
+    api<{ items: Listing[]; pagination: Pagination }>('/api/listings?limit=1')
+      .then((r) => {
+        if (cancelled) return;
+        const total = Number(r.data?.pagination?.total ?? r.data?.items?.length ?? 0);
+        setLiveShopHasItems(Number.isFinite(total) && total > 0);
+      })
+      .catch(() => {
+        if (!cancelled) setLiveShopHasItems(false);
+      });
+    api<Category[]>('/api/listings/categories')
+      .then((catRes) => {
+        if (!cancelled && Array.isArray(catRes.data) && catRes.data.length) {
+          setCategories(catRes.data);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!liveShopHasItems) {
+      setLiveItems([]);
+      setPagination(null);
+      setLoadingLive(false);
+      setError('');
+      return;
+    }
+    let cancelled = false;
+    setLoadingLive(true);
     const qs = new URLSearchParams();
-    Object.entries(filters).forEach(([k, v]) => {
-      if (v) qs.set(k, v);
-    });
+    (['query', 'category_id', 'min_price', 'max_price', 'condition', 'location', 'sort', 'page'] as const).forEach(
+      (k) => {
+        const v = filters[k];
+        if (v) qs.set(k, v);
+      }
+    );
     qs.set('limit', '12');
-    Promise.all([
-      api<{ items: Listing[]; pagination: Pagination }>(`/api/listings?${qs}`),
-      api<Category[]>('/api/listings/categories'),
-    ])
-      .then(([listRes, catRes]) => {
-        setListings(listRes.data.items);
-        setPagination(listRes.data.pagination);
-        setCategories(catRes.data);
+    api<{ items: Listing[]; pagination: Pagination }>(`/api/listings?${qs}`)
+      .then((listRes) => {
+        if (cancelled) return;
+        setLiveItems(Array.isArray(listRes.data?.items) ? listRes.data.items : []);
+        setPagination(listRes.data?.pagination ?? null);
         setError('');
       })
-      .catch((e) => setError(e.message || 'Failed to load'))
-      .finally(() => setLoading(false));
-  }, [filters]);
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e.message || 'Failed to load');
+        setLiveItems([]);
+        setPagination(null);
+        setLiveShopHasItems(false);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingLive(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filters, liveShopHasItems]);
 
   useEffect(() => {
     setRecent(getRecent().slice(0, 4).map(recentAsListing));
   }, []);
+
+  const cats = categories.length ? categories : FALLBACK_CATEGORIES;
+  const useDemo = !liveShopHasItems;
+  const demoFiltered = useMemo(() => filterDemoListings(filters, cats), [filters, cats]);
+  const pageNum = Math.max(1, Number(filters.page) || 1);
+  const pageSize = 12;
+  const demoPages = Math.max(1, Math.ceil(demoFiltered.length / pageSize));
+  const demoPage = Math.min(pageNum, demoPages);
+  const displayPage = useDemo ? demoPage : pageNum;
+  const displayListings = useDemo
+    ? demoFiltered.slice((demoPage - 1) * pageSize, demoPage * pageSize)
+    : liveItems;
+  const displayTotal = useDemo ? demoFiltered.length : pagination?.total;
+  const displayPages = useDemo ? demoPages : pagination?.pages || 0;
+  const waiting = liveShopHasItems && loadingLive;
 
   const filterPanel = (
     <aside className="space-y-5 border border-border bg-surface p-5">
@@ -127,11 +178,15 @@ function ListingsContent() {
       <FilterSelect
         id="shop-category"
         label="Category"
-        value={filters.category_id}
+        value={
+          filters.category_id ||
+          cats.find((c) => c.name.toLowerCase() === filters.category.toLowerCase())?.id ||
+          ''
+        }
         onChange={(v) => setParam('category_id', v)}
       >
         <option value="">All</option>
-        {categories.map((c) => (
+        {cats.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}
           </option>
@@ -186,7 +241,9 @@ function ListingsContent() {
           <p className="eyebrow text-white/45">Shop</p>
           <h1 className="mt-3 font-display text-hero font-medium">The collection</h1>
           <p className="mt-4 max-w-lg text-sm text-white/60 sm:text-base">
-            Browse live listings across Ethiopia — filter by category, condition, and place.
+            {useDemo
+              ? 'Preview catalog while the live shop is empty. Sample items are not for sale.'
+              : 'Browse live listings across Ethiopia — filter by category, condition, and place.'}
           </p>
         </div>
       </section>
@@ -194,7 +251,7 @@ function ListingsContent() {
       <div className="page-shell py-10 sm:py-14">
         <div className="mb-6 flex items-center justify-between gap-3 lg:hidden">
           <p className="text-sm text-muted">
-            {pagination ? `${pagination.total} pieces` : 'Loading…'}
+            {waiting ? 'Loading…' : `${displayTotal ?? 0} pieces`}
           </p>
           <Button
             type="button"
@@ -212,47 +269,61 @@ function ListingsContent() {
             {filterPanel}
           </div>
           <div className="lg:col-span-9">
-            {error && <Alert tone="error">{error}</Alert>}
-            {loading && (
+            {error && !useDemo && (
+              <div className="mb-4">
+                <Alert tone="error">{error}</Alert>
+              </div>
+            )}
+            {useDemo && !waiting && (
+              <div className="mb-4">
+                <Alert tone="info">
+                  Showing a sample catalog. Live listings will appear here after sellers post (and after the
+                  shop is seeded on the server).
+                </Alert>
+              </div>
+            )}
+            {waiting && (
               <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <ListingCardSkeleton key={i} />
                 ))}
               </div>
             )}
-            {!loading && !error && listings.length === 0 && (
+            {!waiting && displayListings.length === 0 && (
               <EmptyState
                 title="No pieces found"
-                description="Try clearing filters or search with a broader keyword."
+                description={
+                  useDemo
+                    ? 'No sample matches this search. Clear filters to browse the preview catalog.'
+                    : 'Try clearing filters or search with a broader keyword.'
+                }
                 actionHref="/listings"
                 actionLabel="Reset shop"
               />
             )}
-            {!loading && listings.length > 0 && (
+            {!waiting && displayListings.length > 0 && (
               <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
-                {listings.map((l, i) => (
-                  <Reveal key={l.id} delayMs={(i % 6) * 40}>
-                    <ListingCard listing={l} />
-                  </Reveal>
+                {displayListings.map((l) => (
+                  <ListingCard key={l.id} listing={l} href={`/listings/${l.id}`} />
                 ))}
               </div>
             )}
-            {pagination && pagination.pages > 1 && (
+            {!waiting && displayPages > 1 && (
               <div className="mt-10 flex items-center justify-center gap-3">
                 <Button
                   variant="outline"
-                  disabled={Number(filters.page) <= 1}
-                  onClick={() => setParam('page', String(Number(filters.page) - 1))}
+                  disabled={displayPage <= 1}
+                  onClick={() => setParam('page', String(displayPage - 1))}
                 >
                   Previous
                 </Button>
                 <span className="text-xs uppercase tracking-[0.14em] text-muted">
-                  {filters.page} / {pagination.pages}
+                  {displayPage} / {displayPages}
                 </span>
                 <Button
                   variant="outline"
-                  disabled={Number(filters.page) >= pagination.pages}
-                  onClick={() => setParam('page', String(Number(filters.page) + 1))}
+                  disabled={displayPage >= displayPages}
+                  onClick={() => setParam('page', String(displayPage + 1))}
                 >
                   Next
                 </Button>

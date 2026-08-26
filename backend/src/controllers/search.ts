@@ -62,6 +62,7 @@ export async function searchListings(req: AuthRequest, res: Response) {
       include: {
         images: true,
         seller: { select: { id: true, name: true, is_verified: true } },
+        category: { select: { id: true, name: true } },
       },
     }),
   ]);
