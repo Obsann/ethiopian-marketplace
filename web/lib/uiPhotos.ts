@@ -4,7 +4,7 @@ export const UI_PHOTOS = {
   hero: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787781695/suqet/ui/hero-market.jpg',
   sell: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787781722/suqet/ui/sell-market.jpg',
   samsung: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787781697/suqet/ui/samsung-phone.jpg',
-  kemis: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787782819/suqet/ui/habesha-kemis.jpg',
+  kemis: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787784544/suqet/ui/habesha-kemis.jpg',
   table: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787781698/suqet/ui/coffee-table.jpg',
   books: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787783009/suqet/ui/amharic-books.jpg',
   helmet: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787781723/suqet/ui/moto-helmet.jpg',
