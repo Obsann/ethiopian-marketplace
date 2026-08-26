@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { ListingCard } from '@/components/ListingCard';
 import { Spinner } from '@/components/ui/Spinner';
 import { Alert } from '@/components/ui/Alert';
+import { demoSellerProfile } from '@/lib/demoCatalog';
 import type { Listing, Review } from '@/types';
 
 type SellerPayload = {
@@ -29,11 +30,19 @@ type SellerPayload = {
 };
 
 export default function SellerPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id: rawId } = useParams<{ id: string }>();
+  const id = decodeURIComponent(Array.isArray(rawId) ? String(rawId[0] ?? '') : String(rawId || ''));
   const [data, setData] = useState<SellerPayload | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (!id) return;
+    const demo = demoSellerProfile(id);
+    if (demo) {
+      setData(demo);
+      setError('');
+      return;
+    }
     api<SellerPayload>(`/api/sellers/${id}`)
       .then((r) => setData(r.data))
       .catch((e) => setError(e instanceof Error ? e.message : 'Not found'));

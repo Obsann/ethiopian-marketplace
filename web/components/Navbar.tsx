@@ -64,7 +64,7 @@ export function Navbar() {
           <Link href="/listings" className={link}>
             Shop
           </Link>
-          <Link href="/listings?sort=newest" className={link}>
+          <Link href="/new" className={link}>
             New
           </Link>
           <Link href="/saved" className={link}>
@@ -180,7 +180,7 @@ export function Navbar() {
           </form>
           <nav className="flex flex-col gap-3 text-sm font-semibold uppercase tracking-[0.16em]" aria-label="Mobile">
             <Link href="/listings">Shop</Link>
-            <Link href="/listings?sort=newest">New arrivals</Link>
+            <Link href="/new">New arrivals</Link>
             <Link href="/saved">Saved</Link>
             {user && <Link href="/inbox">Inbox</Link>}
             {user && <Link href="/orders">Orders</Link>}

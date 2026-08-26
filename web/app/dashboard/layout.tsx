@@ -1,6 +1,6 @@
 export const metadata = {
   title: 'Seller dashboard',
-  description: 'Manage your listings, escrow payments, and messages.',
+  description: 'Manage your listings, orders, and messages.',
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

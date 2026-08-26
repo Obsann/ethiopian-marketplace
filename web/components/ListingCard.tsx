@@ -9,6 +9,25 @@ import { isSaved, toggleSaved } from '@/lib/saved';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 
+const MEDIA_ASPECTS = ['aspect-square', 'aspect-[4/5]', 'aspect-[3/4]'] as const;
+
+function mediaAspectClass(listing: Listing, size: 'default' | 'featured' | 'compact') {
+  if (size === 'featured') return 'aspect-[4/5]';
+  const category = listing.category?.name || '';
+  if (category === 'Clothing') return 'aspect-[4/5]';
+  if (category === 'Books' || category === 'Kitchen') return 'aspect-square';
+  let hash = 0;
+  for (let i = 0; i < listing.id.length; i += 1) {
+    hash = (hash * 31 + listing.id.charCodeAt(i)) | 0;
+  }
+  return MEDIA_ASPECTS[Math.abs(hash) % MEDIA_ASPECTS.length];
+}
+
+function mediaMaxHeightClass(size: 'default' | 'featured' | 'compact') {
+  if (size === 'featured') return 'max-h-80 md:max-h-[min(70svh,26rem)] lg:max-h-[min(65svh,32rem)]';
+  return 'max-h-72 md:max-h-80 lg:max-h-[min(70svh,22rem)]';
+}
+
 export function ListingCard({
   listing,
   priority = false,
@@ -34,20 +53,13 @@ export function ListingCard({
   const primary = imgs[0] || '/placeholder-listing.svg';
   const secondary = imgs[1];
 
-  const wrap =
-    size === 'featured'
-      ? 'w-full'
-      : size === 'compact'
-        ? 'w-full'
-        : 'w-full';
+  const objectPos = listing.category?.name === 'Clothing' ? 'object-top' : 'object-center';
 
   return (
-    <article className={`group relative snap-start ${wrap}`}>
+    <article className="group relative w-full break-inside-avoid snap-start">
       <Link href={href || `/listings/${listing.id}`} className="block cursor-pointer outline-none">
         <div
-          className={`relative overflow-hidden rounded-xl bg-stone-200 ${
-            size === 'featured' ? 'aspect-[3/4]' : size === 'compact' ? 'aspect-[3/4]' : 'aspect-[4/5]'
-          }`}
+          className={`relative w-full overflow-hidden rounded-xl bg-stone-200 ${mediaAspectClass(listing, size)} ${mediaMaxHeightClass(size)}`}
         >
           <SafeImage
             src={primary}
@@ -55,7 +67,7 @@ export function ListingCard({
             fill
             priority={priority}
             sizes={size === 'featured' ? '420px' : '(max-width:640px) 50vw, 33vw'}
-            className={`object-cover transition duration-700 ease-out group-hover:scale-[1.04] ${
+            className={`object-cover ${objectPos} transition duration-700 ease-out group-hover:scale-[1.04] ${
               secondary ? 'group-hover:opacity-0' : ''
             }`}
           />
@@ -65,7 +77,7 @@ export function ListingCard({
               alt=""
               fill
               sizes="(max-width:640px) 50vw, 33vw"
-              className="object-cover opacity-0 transition duration-700 group-hover:opacity-100"
+              className={`object-cover ${objectPos} opacity-0 transition duration-700 group-hover:opacity-100`}
               aria-hidden
             />
           )}

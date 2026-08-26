@@ -9,8 +9,7 @@ export default function PrivacyPage() {
         are httpOnly. Secrets stay on the API, not in the website.
       </p>
       <p className="text-sm leading-relaxed text-muted">
-        This demo is not a production privacy policy. Do not upload documents you would not share
-        with a hackathon reviewer.
+        Do not upload identity documents you are not comfortable sharing for seller verification.
       </p>
     </div>
   );

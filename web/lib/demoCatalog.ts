@@ -1,5 +1,5 @@
-import type { Category, Listing } from '@/types';
-import { DEMO_CATALOG, type CatalogItem } from '@/lib/uiPhotos';
+import type { Category, Listing, Review } from '@/types';
+import { DEMO_CATALOG, type CatalogItem, type DemoSellerKey } from '@/lib/uiPhotos';
 
 /** Stable IDs from the categories seed migration. */
 export const DEMO_CATEGORY_IDS: Record<string, string> = {
@@ -18,12 +18,50 @@ export const FALLBACK_CATEGORIES: Category[] = Object.entries(DEMO_CATEGORY_IDS)
   name,
 }));
 
+export const DEMO_SELLERS: Record<
+  DemoSellerKey,
+  { id: string; name: string; is_verified: boolean; created_at: string; role: 'seller' }
+> = {
+  abebe: {
+    id: 'demo-abebe',
+    name: 'Abebe Kebede',
+    is_verified: true,
+    created_at: '2025-11-02T08:00:00.000Z',
+    role: 'seller',
+  },
+  tigist: {
+    id: 'demo-tigist',
+    name: 'Tigist Haile',
+    is_verified: true,
+    created_at: '2025-09-18T08:00:00.000Z',
+    role: 'seller',
+  },
+};
+
+export type DemoSellerProfile = {
+  seller: {
+    id: string;
+    name: string;
+    is_verified: boolean;
+    created_at: string;
+    role: string;
+  };
+  stats: {
+    active_listings: number;
+    sold_count: number;
+    rating_avg: number;
+    rating_count: number;
+  };
+  listings: Listing[];
+  reviews: Review[];
+};
+
 export function isDemoListingId(id: string) {
   return /^demo-\d+$/.test(id);
 }
 
-function conditionLabel(condition: CatalogItem['condition']) {
-  return condition.replace('_', ' ');
+export function isDemoSellerId(id: string) {
+  return id === DEMO_SELLERS.abebe.id || id === DEMO_SELLERS.tigist.id;
 }
 
 export function demoListingPath(index: number) {
@@ -32,23 +70,31 @@ export function demoListingPath(index: number) {
 
 export function catalogAsListing(item: CatalogItem, index: number): Listing {
   const category_id = DEMO_CATEGORY_IDS[item.category] || item.category;
+  const seller = DEMO_SELLERS[item.seller];
   return {
     id: `demo-${index}`,
-    seller_id: 'demo',
+    seller_id: seller.id,
     title: item.title,
-    description: `${item.title} in ${conditionLabel(item.condition)} condition, from ${item.location}. This is a sample catalog item so you can preview the shop while live listings are empty.`,
+    description: item.description,
     price: item.price,
     condition: item.condition,
     category_id,
     location: item.location,
     status: 'active',
     images: [item.image],
-    created_at: '',
+    created_at: new Date(Date.now() - index * 8 * 60 * 60 * 1000).toISOString(),
     primary_image: item.image,
-    meetup_ok: true,
-    delivery_ok: false,
+    meetup_ok: item.meetup_ok !== false,
+    delivery_ok: Boolean(item.delivery_ok),
+    delivery_fee: item.delivery_ok ? item.delivery_fee ?? null : null,
+    size: item.size ?? null,
     category: { id: category_id, name: item.category },
-    seller: { id: 'demo', name: 'SuqET sample', is_verified: false },
+    seller: {
+      id: seller.id,
+      name: seller.name,
+      is_verified: seller.is_verified,
+      created_at: seller.created_at,
+    },
   };
 }
 
@@ -67,6 +113,33 @@ export function demoListingById(id: string): Listing | null {
 
 export function similarDemoListings(listing: Listing): Listing[] {
   return allDemoListings().filter((row) => row.id !== listing.id && row.category_id === listing.category_id);
+}
+
+export function listingsByDemoSeller(sellerId: string): Listing[] {
+  return allDemoListings().filter((row) => row.seller_id === sellerId);
+}
+
+export function demoSellerProfile(id: string): DemoSellerProfile | null {
+  const seller = Object.values(DEMO_SELLERS).find((row) => row.id === id);
+  if (!seller) return null;
+  const listings = listingsByDemoSeller(id);
+  return {
+    seller: {
+      id: seller.id,
+      name: seller.name,
+      is_verified: seller.is_verified,
+      created_at: seller.created_at,
+      role: seller.role,
+    },
+    stats: {
+      active_listings: listings.length,
+      sold_count: 0,
+      rating_avg: 0,
+      rating_count: 0,
+    },
+    listings,
+    reviews: [],
+  };
 }
 
 export type DemoShopFilters = {
@@ -124,7 +197,7 @@ export function filterDemoListings(filters: DemoShopFilters, categories: Categor
 
   let items = allDemoListings().filter((listing) => {
     if (query) {
-      const hay = `${listing.title} ${listing.description} ${listing.location} ${listing.category?.name || ''}`.toLowerCase();
+      const hay = `${listing.title} ${listing.description} ${listing.location} ${listing.category?.name || ''} ${listing.seller?.name || ''}`.toLowerCase();
       if (!hay.includes(query)) return false;
     }
     if (categoryRaw) {
@@ -146,6 +219,10 @@ export function filterDemoListings(filters: DemoShopFilters, categories: Categor
     items = [...items].sort((a, b) => a.price - b.price);
   } else if (filters.sort === 'price_desc') {
     items = [...items].sort((a, b) => b.price - a.price);
+  } else {
+    items = [...items].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
   }
 
   return items;

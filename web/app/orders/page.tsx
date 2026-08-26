@@ -115,7 +115,7 @@ function OrdersContent() {
           <EmptyState
             icon={ShoppingBag}
             title="No orders yet"
-            description="When you buy or sell, escrow transactions will appear here."
+            description="When you buy or sell, your orders will appear here."
             actionHref="/listings"
             actionLabel="Browse listings"
           />

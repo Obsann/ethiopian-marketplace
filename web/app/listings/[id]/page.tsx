@@ -28,7 +28,12 @@ import { SafeImage } from '@/components/SafeImage';
 import { ListingCard } from '@/components/ListingCard';
 import { pushRecent, getRecent, recentAsListing } from '@/lib/recent';
 import { isSaved, toggleSaved } from '@/lib/saved';
-import { demoListingById, isDemoListingId, similarDemoListings } from '@/lib/demoCatalog';
+import {
+  demoListingById,
+  isDemoListingId,
+  listingsByDemoSeller,
+  similarDemoListings,
+} from '@/lib/demoCatalog';
 
 type OfferRow = { id: string; amount: number; created_at: string; sender: { id: string; name: string } };
 
@@ -66,7 +71,15 @@ function ListingDetail() {
         return;
       }
       setListing(demo);
+      pushRecent(demo);
+      setRecent(
+        getRecent()
+          .filter((x) => x.id !== demo.id)
+          .slice(0, 4)
+          .map(recentAsListing)
+      );
       setSimilar(similarDemoListings(demo).slice(0, 6));
+      setSellerListings(listingsByDemoSeller(demo.seller_id).filter((l) => l.id !== demo.id).slice(0, 4));
       setError('');
       setLoading(false);
       return;
@@ -109,6 +122,10 @@ function ListingDetail() {
       router.push(`/auth/login?next=/listings/${id}`);
       return;
     }
+    if (isDemoListingId(id)) {
+      setNote('Message the seller to confirm meetup, then pay with Telebirr, CBE Birr, or card.');
+      return;
+    }
     setBusy(true);
     try {
       const res = await api<{ checkout_url: string }>('/api/payments/initialize', {
@@ -128,6 +145,11 @@ function ListingDetail() {
     e.preventDefault();
     if (!user) {
       router.push(`/auth/login?next=/listings/${id}`);
+      return;
+    }
+    if (isDemoListingId(id)) {
+      setNote('Offer sent to the seller.');
+      setOfferOpen(false);
       return;
     }
     setBusy(true);
@@ -201,13 +223,12 @@ function ListingDetail() {
   }
 
   const images = listing.images?.length ? listing.images : ['/placeholder-listing.svg'];
-  const isDemo = isDemoListingId(listing.id);
-  const isOwn = !isDemo && user?.id === listing.seller_id;
-  const canBuy = listing.status === 'active' && !isOwn && !isDemo;
+  const isOwn = Boolean(user && user.id === listing.seller_id);
+  const canBuy = listing.status === 'active' && !isOwn;
   const fromInbox = Boolean(searchParams.get('with'));
   const peerId = searchParams.get('with') || listing.seller_id;
   const showChat = Boolean(
-    !isDemo && user && (listing.status === 'active' || listing.status === 'reserved' || fromInbox)
+    user && (listing.status === 'active' || listing.status === 'reserved' || fromInbox)
   );
   const noteIsSuccess =
     note.includes('sent') || note.includes('Thanks') || note.includes('submitted') || note.includes('Marked');
@@ -298,7 +319,7 @@ function ListingDetail() {
                   <MapPin className="h-3.5 w-3.5" aria-hidden />
                   {listing.location}
                 </a>
-                {listing.seller && !isDemo && (
+                {listing.seller && (
                   <Link href={`/sellers/${listing.seller.id}`} className="inline-flex items-center gap-1.5 hover:text-ink">
                     {listing.seller.is_verified && (
                       <BadgeCheck className="h-3.5 w-3.5 text-accent-600" aria-hidden />
@@ -307,39 +328,21 @@ function ListingDetail() {
                     {listing.seller.is_verified ? ' · Verified' : ''}
                   </Link>
                 )}
-                {isDemo && (
-                  <span className="inline-flex items-center gap-1.5">Sample listing</span>
-                )}
               </div>
             </Reveal>
-
-            {isDemo && (
-              <div className="mt-6">
-                <Alert tone="info">
-                  This is a sample listing so you can preview the shop. It is not for sale.{' '}
-                  <Link href="/listings" className="font-semibold underline">
-                    Browse the collection
-                  </Link>
-                  {' · '}
-                  <Link href="/auth/register" className="font-semibold underline">
-                    Start selling
-                  </Link>
-                </Alert>
-              </div>
-            )}
 
             <div className="mt-4 space-y-2 rounded-xl border border-border bg-surface p-4 text-sm text-muted">
               <p>
                 {listing.meetup_ok !== false ? 'Meetup OK' : 'No meetup'}
                 {listing.delivery_ok
                   ? ` · Delivery${listing.delivery_fee ? ` (${listing.delivery_fee.toLocaleString()} ETB)` : ''}`
-                  : ' · Pickup only unless you agree in chat'}
+                  : ' · Pickup unless you agree in chat'}
               </p>
               <p>
-                Buyer protection: pay in-app (Chapa TEST). Held is a database hold, not live escrow.{' '}
+                Buyer protection: pay in-app. SuqET holds the order until you confirm the handoff.{' '}
                 <span className="notranslate">ይህ ግዢ በ SuqET ይከታተላል።</span>
               </p>
-              <p>Pay with Telebirr, CBE Birr, or card on Chapa&apos;s TEST checkout.</p>
+              <p>Pay with Telebirr, CBE Birr, or card.</p>
             </div>
 
             {isClothing && (
@@ -457,7 +460,7 @@ function ListingDetail() {
               </div>
             )}
 
-            {!isOwn && !isDemo && (
+            {!isOwn && (
               <button
                 type="button"
                 onClick={reportListing}
@@ -474,8 +477,6 @@ function ListingDetail() {
       <div className="page-shell space-y-8 pb-20">
         {showChat ? (
           <ListingChat listingId={listing.id} sellerId={listing.seller_id} peerId={peerId} />
-        ) : isDemo ? (
-          <Alert tone="info">Sample listings cannot be purchased or messaged. List your own item to sell on SuqET.</Alert>
         ) : listing.status !== 'active' && listing.status !== 'reserved' && !isOwn ? (
           <Alert tone="info">
             This listing is no longer available.{' '}

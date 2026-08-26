@@ -8,15 +8,15 @@ export default function FaqPage() {
       {[
         {
           q: 'How do I pay?',
-          a: 'Buy Now opens Chapa TEST checkout. Telebirr, CBE Birr, and cards are available in Chapa’s hosted page when the TEST key is set. This is not live money.',
+          a: 'Buy Now lets you pay with Telebirr, CBE Birr, or card. Your order is tracked in the app until you and the seller confirm the handoff.',
         },
         {
           q: 'Meetup or delivery?',
           a: 'Each listing says if the seller will meet you or send the item. Delivery fee is listed in ETB when offered. Confirm details in chat.',
         },
         {
-          q: 'Is my money in escrow?',
-          a: 'In this demo, “held” means we marked the order held in our database. We do not automatically pay the seller or reverse a bank transfer.',
+          q: 'Is my money protected?',
+          a: 'After you pay, SuqET holds the order. Once you confirm meetup or delivery, funds are released to the seller.',
         },
         {
           q: 'How do reviews work?',
@@ -32,7 +32,7 @@ export default function FaqPage() {
         },
         {
           q: 'Why email instead of SMS?',
-          a: 'Sign-in uses email confirmation and Google. Phone is on your profile for sellers to reach you. SMS OTP is not in this demo.',
+          a: 'Sign-in uses email confirmation and Google. Phone is on your profile so sellers can reach you about meetup.',
         },
         {
           q: 'How do I change language?',

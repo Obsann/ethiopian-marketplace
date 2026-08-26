@@ -84,8 +84,8 @@ export default function HomePage() {
             is already here.
           </h1>
           <p className="mt-6 max-w-xl text-base leading-relaxed text-white/75 animate-fade-up sm:text-lg [animation-delay:140ms]">
-            Used phones, kemis, furniture, and more from sellers in Addis, Jimma, and Hawassa.
-            Chat in-app. Pay in ETB.
+            Used phones, kemis, furniture, and more from sellers in Addis, Jimma, Hawassa,
+            Mekelle, Bahir Dar, Dire Dawa, and Gondar. Chat in-app. Pay in ETB.
           </p>
 
           <form
@@ -188,11 +188,11 @@ export default function HomePage() {
           )}
 
           {!loading && featured.length > 0 && (
-            <div className="grid gap-4 lg:grid-cols-12 lg:gap-6">
+            <div className="grid items-start gap-4 lg:grid-cols-12 lg:gap-6">
               <Reveal className="lg:col-span-7" delayMs={40}>
                 {featured[0] && <ListingCard listing={featured[0]} priority size="featured" />}
               </Reveal>
-              <div className="grid gap-4 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-1 lg:gap-6">
+              <div className="grid items-start gap-4 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-1 lg:gap-6">
                 {featured.slice(1, 3).map((l, i) => (
                   <Reveal key={l.id} delayMs={80 + i * 60}>
                     <ListingCard listing={l} />
@@ -203,11 +203,11 @@ export default function HomePage() {
           )}
 
           {!loading && featured.length === 0 && (
-            <div className="grid gap-4 lg:grid-cols-12 lg:gap-6">
+            <div className="grid items-start gap-4 lg:grid-cols-12 lg:gap-6">
               <Reveal className="lg:col-span-7" delayMs={40}>
                 <ListingCard listing={catalogAsListing(DEMO_CATALOG[0], 0)} href={demoListingPath(0)} priority size="featured" />
               </Reveal>
-              <div className="grid gap-4 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-1 lg:gap-6">
+              <div className="grid items-start gap-4 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-1 lg:gap-6">
                 {DEMO_CATALOG.slice(1, 3).map((item, i) => (
                   <Reveal key={item.title} delayMs={80 + i * 60}>
                     <ListingCard listing={catalogAsListing(item, i + 1)} href={demoListingPath(i + 1)} />
@@ -293,21 +293,21 @@ export default function HomePage() {
                   <p className="eyebrow">Just listed</p>
                   <h2 className="mt-2 font-display text-display font-medium">New arrivals</h2>
                 </div>
-                <Link href="/listings?sort=newest" className="text-xs font-semibold uppercase tracking-[0.16em] text-muted hover:text-ink">
+                <Link href="/new" className="text-xs font-semibold uppercase tracking-[0.16em] text-muted hover:text-ink">
                   View all
                 </Link>
               </div>
             </Reveal>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
+            <div className="product-tray">
               {arrivals.length > 0
                 ? arrivals.map((l, i) => (
                     <Reveal key={l.id} delayMs={i * 40}>
                       <ListingCard listing={l} />
                     </Reveal>
                   ))
-                : DEMO_CATALOG.slice(10).map((item, i) => (
+                : DEMO_CATALOG.slice(0, 8).map((item, i) => (
                     <Reveal key={item.title} delayMs={i * 40}>
-                      <ListingCard listing={catalogAsListing(item, i + 10)} href={demoListingPath(i + 10)} />
+                      <ListingCard listing={catalogAsListing(item, i)} href={demoListingPath(i)} />
                     </Reveal>
                   ))}
             </div>

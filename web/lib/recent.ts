@@ -39,7 +39,7 @@ export function recentAsListing(item: RecentItem): Listing {
 }
 
 export function pushRecent(listing: Listing): void {
-  if (typeof window === 'undefined' || listing.id.startsWith('demo-')) return;
+  if (typeof window === 'undefined') return;
   const item: RecentItem = {
     id: listing.id,
     title: listing.title,

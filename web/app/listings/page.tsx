@@ -241,9 +241,7 @@ function ListingsContent() {
           <p className="eyebrow text-white/45">Shop</p>
           <h1 className="mt-3 font-display text-hero font-medium">The collection</h1>
           <p className="mt-4 max-w-lg text-sm text-white/60 sm:text-base">
-            {useDemo
-              ? 'Preview catalog while the live shop is empty. Sample items are not for sale.'
-              : 'Browse live listings across Ethiopia — filter by category, condition, and place.'}
+            Browse listings across Ethiopia — filter by category, condition, and place.
           </p>
         </div>
       </section>
@@ -274,16 +272,8 @@ function ListingsContent() {
                 <Alert tone="error">{error}</Alert>
               </div>
             )}
-            {useDemo && !waiting && (
-              <div className="mb-4">
-                <Alert tone="info">
-                  Showing a sample catalog. Live listings will appear here after sellers post (and after the
-                  shop is seeded on the server).
-                </Alert>
-              </div>
-            )}
             {waiting && (
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
+              <div className="product-tray">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <ListingCardSkeleton key={i} />
                 ))}
@@ -294,7 +284,7 @@ function ListingsContent() {
                 title="No pieces found"
                 description={
                   useDemo
-                    ? 'No sample matches this search. Clear filters to browse the preview catalog.'
+                    ? 'No listings match this search. Clear filters to see everything on the suq.'
                     : 'Try clearing filters or search with a broader keyword.'
                 }
                 actionHref="/listings"
@@ -302,7 +292,7 @@ function ListingsContent() {
               />
             )}
             {!waiting && displayListings.length > 0 && (
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
+              <div className="product-tray">
                 {displayListings.map((l) => (
                   <ListingCard key={l.id} listing={l} href={`/listings/${l.id}`} />
                 ))}
@@ -350,7 +340,7 @@ export default function ListingsPage() {
   return (
     <Suspense
       fallback={
-        <div className="page-shell grid grid-cols-2 gap-4 py-24 md:grid-cols-3">
+        <div className="page-shell product-tray py-24">
           {Array.from({ length: 6 }).map((_, i) => (
             <ListingCardSkeleton key={i} />
           ))}

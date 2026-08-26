@@ -74,6 +74,14 @@ body {
     @apply flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2 [-ms-overflow-style:none] [scrollbar-width:none];
   }
 
+  .product-tray {
+    @apply columns-2 gap-x-4 md:columns-3 md:gap-x-6;
+  }
+
+  .product-tray > * {
+    @apply mb-4 break-inside-avoid md:mb-6;
+  }
+
   .carousel-track::-webkit-scrollbar {
     display: none;
   }

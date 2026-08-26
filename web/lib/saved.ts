@@ -26,7 +26,7 @@ export function toggleSaved(id: string): boolean {
   return next.has(id);
 }
 
-/** Push guest hearts to the account once the user is signed in. */
+/** Push guest hearts to the account once the user is signed in. Demo ids stay local. */
 export async function syncSavedToApi(token?: string | null): Promise<void> {
   const ids = getSavedIds().filter((id) => !id.startsWith('demo-'));
   if (ids.length === 0) return;

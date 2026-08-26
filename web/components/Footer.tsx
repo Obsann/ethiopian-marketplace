@@ -27,7 +27,7 @@ export function Footer() {
               </Link>
             </li>
             <li>
-              <Link href="/listings?sort=newest" className="hover:text-white">
+              <Link href="/new" className="hover:text-white">
                 New arrivals
               </Link>
             </li>
