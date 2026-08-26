@@ -14,8 +14,8 @@ export function Footer() {
             Suq<span className="text-accent-400">ET</span>
           </p>
           <p className="mt-4 max-w-md text-sm leading-relaxed text-white/55">
-            An editorial marketplace for second-hand goods across Ethiopia — discover, message, and
-            check out with confidence.
+            Ethiopia&apos;s second-hand suq — buy and sell used goods in ETB, message sellers, and
+            check out in-app.
           </p>
         </div>
         <div>

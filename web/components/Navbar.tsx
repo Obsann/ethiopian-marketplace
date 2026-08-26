@@ -45,6 +45,11 @@ export function Navbar() {
         solid ? 'border-b border-border bg-paper/95 backdrop-blur-md' : 'bg-transparent'
       }`}
     >
+      <div className="flex h-1 w-full" aria-hidden>
+        <span className="flex-1 bg-et-green" />
+        <span className="flex-1 bg-et-yellow" />
+        <span className="flex-1 bg-et-red" />
+      </div>
       <div className="page-shell flex h-16 items-center gap-4 sm:h-20">
         <Link
           href="/"
@@ -143,7 +148,7 @@ export function Navbar() {
           )}
           <button
             type="button"
-            className={`rounded-none p-2 lg:hidden ${solid ? 'text-ink' : 'text-white'}`}
+            className={`rounded-lg p-2 lg:hidden ${solid ? 'text-ink' : 'text-white'}`}
             aria-expanded={open}
             aria-label={open ? 'Close menu' : 'Open menu'}
             onClick={() => setOpen((v) => !v)}

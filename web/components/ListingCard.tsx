@@ -9,10 +9,12 @@ export function ListingCard({
   listing,
   priority = false,
   size = 'default',
+  href,
 }: {
   listing: Listing;
   priority?: boolean;
   size?: 'default' | 'featured' | 'compact';
+  href?: string;
 }) {
   const imgs = [
     listing.primary_image || listing.images?.[0],
@@ -30,9 +32,9 @@ export function ListingCard({
 
   return (
     <article className={`group relative snap-start ${wrap}`}>
-      <Link href={`/listings/${listing.id}`} className="block cursor-pointer outline-none">
+      <Link href={href || `/listings/${listing.id}`} className="block cursor-pointer outline-none">
         <div
-          className={`relative overflow-hidden bg-stone-200 ${
+          className={`relative overflow-hidden rounded-xl bg-stone-200 ${
             size === 'featured' ? 'aspect-[3/4]' : size === 'compact' ? 'aspect-[3/4]' : 'aspect-[4/5]'
           }`}
         >
@@ -58,7 +60,7 @@ export function ListingCard({
           )}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/35 via-transparent to-transparent opacity-80" />
           {listing.seller?.is_verified && (
-            <span className="absolute left-3 top-3 inline-flex items-center gap-1 bg-white/95 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-ink backdrop-blur-sm">
+            <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-ink backdrop-blur-sm">
               <BadgeCheck className="h-3 w-3 text-accent-600" aria-hidden />
               Verified
             </span>
@@ -83,7 +85,7 @@ export function ListingCard({
       </Link>
       <button
         type="button"
-        className="absolute right-3 top-3 z-10 flex h-9 w-9 cursor-pointer items-center justify-center bg-white/90 text-ink opacity-0 transition duration-300 hover:bg-white group-hover:opacity-100 focus-visible:opacity-100"
+        className="absolute right-3 top-3 z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/90 text-ink opacity-0 transition duration-300 hover:bg-white group-hover:opacity-100 focus-visible:opacity-100"
         aria-label="Save for later"
         onClick={(e) => {
           e.preventDefault();

@@ -28,6 +28,11 @@ module.exports = {
         paper: '#FAFAF9',
         surface: '#FFFFFF',
         border: '#E7E5E4',
+        et: {
+          green: '#078930',
+          yellow: '#FCDD09',
+          red: '#DA121A',
+        },
         danger: {
           50: '#FEF2F2',
           500: '#EF4444',
