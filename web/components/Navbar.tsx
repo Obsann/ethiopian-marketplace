@@ -45,6 +45,11 @@ export function Navbar() {
         solid ? 'border-b border-border bg-paper/95 backdrop-blur-md' : 'bg-transparent'
       }`}
     >
+      <div className="flex h-1 w-full" aria-hidden>
+        <span className="flex-1 bg-et-green" />
+        <span className="flex-1 bg-et-yellow" />
+        <span className="flex-1 bg-et-red" />
+      </div>
       <div className="page-shell flex h-16 items-center gap-4 sm:h-20">
         <Link
           href="/"
@@ -62,9 +67,17 @@ export function Navbar() {
           <Link href="/listings?sort=newest" className={link}>
             New
           </Link>
+          <Link href="/saved" className={link}>
+            Saved
+          </Link>
           {!isLoading && user?.role === 'seller' && (
             <Link href="/sell" className={link}>
               Sell
+            </Link>
+          )}
+          {!isLoading && (user?.role === 'seller' || user?.role === 'admin') && (
+            <Link href="/dashboard" className={link}>
+              Dashboard
             </Link>
           )}
           {!isLoading && user && (
@@ -143,7 +156,7 @@ export function Navbar() {
           )}
           <button
             type="button"
-            className={`rounded-none p-2 lg:hidden ${solid ? 'text-ink' : 'text-white'}`}
+            className={`rounded-lg p-2 lg:hidden ${solid ? 'text-ink' : 'text-white'}`}
             aria-expanded={open}
             aria-label={open ? 'Close menu' : 'Open menu'}
             onClick={() => setOpen((v) => !v)}
@@ -168,6 +181,7 @@ export function Navbar() {
           <nav className="flex flex-col gap-3 text-sm font-semibold uppercase tracking-[0.16em]" aria-label="Mobile">
             <Link href="/listings">Shop</Link>
             <Link href="/listings?sort=newest">New arrivals</Link>
+            <Link href="/saved">Saved</Link>
             {user && <Link href="/inbox">Inbox</Link>}
             {user && <Link href="/orders">Orders</Link>}
             {user?.role === 'seller' && <Link href="/sell">Sell</Link>}

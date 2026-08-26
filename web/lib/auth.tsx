@@ -8,8 +8,9 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { disconnectSocket } from '@/lib/socket';
+import { syncSavedToApi } from '@/lib/saved';
 import type { User } from '@/types';
 
 interface AuthContextValue {
@@ -38,8 +39,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     try {
-      const res = await api<{ user: User }>('/api/auth/me', token ? { token } : {});
+      const res = await api<{ user: User | null }>('/api/auth/me', token ? { token } : {});
       setUser(res.data.user);
+      if (!res.data.user) setToken(null);
     } catch {
       setUser(null);
       setToken(null);
@@ -47,8 +49,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   useEffect(() => {
-    api<{ user: User }>('/api/auth/me')
-      .then((res) => setUser(res.data.user))
+    api<{ user: User | null }>('/api/auth/me')
+      .then((res) => {
+        setUser(res.data.user);
+        if (!res.data.user) setToken(null);
+        else void syncSavedToApi();
+      })
       .catch(() => {
         setUser(null);
         setToken(null);
@@ -63,12 +69,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     setToken(res.data.token);
     setUser(res.data.user);
+    void syncSavedToApi(res.data.token);
   }, []);
 
   const loginWithToken = useCallback(async (nextToken: string) => {
-    const res = await api<{ user: User }>('/api/auth/me', { token: nextToken });
+    const res = await api<{ user: User | null }>('/api/auth/me', { token: nextToken });
+    if (!res.data.user) {
+      throw new ApiError('Could not restore session', 401);
+    }
     setToken(nextToken);
     setUser(res.data.user);
+    void syncSavedToApi(nextToken);
   }, []);
 
   const register = useCallback(

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Package, MessageSquare, HandCoins } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -12,6 +11,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
+import { SafeImage } from '@/components/SafeImage';
 
 interface DashboardData {
   stats: {
@@ -100,6 +100,37 @@ export default function DashboardPage() {
           }
         : d
     );
+  }
+
+  async function setListingStatus(id: string, status: 'active' | 'reserved' | 'sold') {
+    if (!user) return;
+    setBusyId(id);
+    setError('');
+    try {
+      await api(`/api/listings/${id}`, {
+        method: 'PUT',
+        token,
+        body: JSON.stringify({ status }),
+      });
+      setData((d) => {
+        if (!d) return d;
+        const prev = d.listings.find((l) => l.id === id);
+        const listings = d.listings.map((l) => (l.id === id ? { ...l, status } : l));
+        let active = d.stats.active_listings;
+        let sold = d.stats.total_sold;
+        if (prev) {
+          if (prev.status === 'active' && status !== 'active') active = Math.max(0, active - 1);
+          if (prev.status !== 'active' && status === 'active') active += 1;
+          if (prev.status !== 'sold' && status === 'sold') sold += 1;
+          if (prev.status === 'sold' && status !== 'sold') sold = Math.max(0, sold - 1);
+        }
+        return { ...d, listings, stats: { ...d.stats, active_listings: active, total_sold: sold } };
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not update listing');
+    } finally {
+      setBusyId('');
+    }
   }
 
   if (isLoading || !canManage || loading) {
@@ -203,7 +234,7 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-3">
                           <div className="relative h-10 w-10 overflow-hidden border border-border bg-paper">
                             {l.image && (
-                              <Image src={l.image} alt="" fill className="object-cover" sizes="40px" />
+                              <SafeImage src={l.image} alt="" fill className="object-cover" sizes="40px" />
                             )}
                           </div>
                           <Link
@@ -215,20 +246,64 @@ export default function DashboardPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge tone={l.status === 'active' ? 'green' : 'gray'}>{l.status}</Badge>
+                        <Badge
+                          tone={
+                            l.status === 'active' ? 'green' : l.status === 'reserved' ? 'amber' : 'gray'
+                          }
+                        >
+                          {l.status}
+                        </Badge>
                       </td>
                       <td className="px-4 py-3 font-medium text-accent-600">
                         {l.price.toLocaleString()} ETB
                       </td>
                       <td className="px-4 py-3 text-muted">{l.view_count}</td>
                       <td className="px-4 py-3">
-                        <button
-                          type="button"
-                          className="text-danger-600 transition hover:underline"
-                          onClick={() => removeListing(l.id)}
-                        >
-                          Delete
-                        </button>
+                        <div className="flex flex-wrap gap-2">
+                          <Link
+                            href={`/listings/${l.id}/edit`}
+                            className="text-ink transition hover:underline"
+                          >
+                            Edit
+                          </Link>
+                          {l.status === 'active' && (
+                            <button
+                              type="button"
+                              className="text-ink transition hover:underline disabled:opacity-50"
+                              disabled={busyId === l.id}
+                              onClick={() => setListingStatus(l.id, 'reserved')}
+                            >
+                              Reserve
+                            </button>
+                          )}
+                          {l.status === 'reserved' && (
+                            <button
+                              type="button"
+                              className="text-ink transition hover:underline disabled:opacity-50"
+                              disabled={busyId === l.id}
+                              onClick={() => setListingStatus(l.id, 'active')}
+                            >
+                              Unreserve
+                            </button>
+                          )}
+                          {l.status !== 'sold' && (
+                            <button
+                              type="button"
+                              className="text-ink transition hover:underline disabled:opacity-50"
+                              disabled={busyId === l.id}
+                              onClick={() => setListingStatus(l.id, 'sold')}
+                            >
+                              Sold
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="text-danger-600 transition hover:underline"
+                            onClick={() => removeListing(l.id)}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

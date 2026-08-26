@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/Button';
@@ -68,6 +69,22 @@ export default function AccountPage() {
           <p className="mt-2 text-sm text-muted">
             Update your name and phone. Google accounts can add a phone here.
           </p>
+          <nav className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+            <Link href="/saved" className="hover:text-ink">
+              Saved
+            </Link>
+            <Link href="/orders" className="hover:text-ink">
+              Orders
+            </Link>
+            <Link href="/inbox" className="hover:text-ink">
+              Inbox
+            </Link>
+            {(user.role === 'seller' || user.role === 'admin') && (
+              <Link href={`/sellers/${user.id}`} className="hover:text-ink">
+                Public profile
+              </Link>
+            )}
+          </nav>
         </div>
         <form onSubmit={onSubmit} className="space-y-4 border border-border bg-surface p-6 sm:p-8">
           <Input id="account-email" label="Email" name="email" value={user.email} disabled />

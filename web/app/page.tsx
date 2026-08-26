@@ -3,16 +3,18 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { ArrowDownRight, ArrowRight, Search } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Listing, Category } from '@/types';
 import { ListingCard } from '@/components/ListingCard';
 import { Carousel } from '@/components/Carousel';
 import { Reveal } from '@/components/Reveal';
+import { SafeImage } from '@/components/SafeImage';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { Alert } from '@/components/ui/Alert';
+import { CATEGORY_PHOTOS, DEMO_CATALOG, UI_PHOTOS, type CatalogItem } from '@/lib/uiPhotos';
+import { getRecent, recentAsListing } from '@/lib/recent';
 
 const FALLBACK_CATEGORIES = [
   'Electronics',
@@ -25,6 +27,31 @@ const FALLBACK_CATEGORIES = [
   'Other',
 ].map((name) => ({ id: name, name }));
 
+function categoryPhoto(name: string) {
+  return CATEGORY_PHOTOS[name] || UI_PHOTOS.hero;
+}
+
+function catalogAsListing(item: CatalogItem, index: number): Listing {
+  return {
+    id: `demo-${index}`,
+    seller_id: 'demo',
+    title: item.title,
+    description: '',
+    price: item.price,
+    condition: item.condition,
+    category_id: item.category,
+    location: item.location,
+    status: 'active',
+    images: [item.image],
+    created_at: '',
+    primary_image: item.image,
+  };
+}
+
+function catalogHref(item: CatalogItem) {
+  return `/listings?query=${encodeURIComponent(item.title)}`;
+}
+
 export default function HomePage() {
   const router = useRouter();
   const [query, setQuery] = useState('');
@@ -32,6 +59,7 @@ export default function HomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [recent, setRecent] = useState<Listing[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -44,6 +72,7 @@ export default function HomePage() {
       })
       .catch((e) => setError(e.message || 'Failed to load'))
       .finally(() => setLoading(false));
+    setRecent(getRecent().slice(0, 4).map(recentAsListing));
   }, []);
 
   function onSearch(e: FormEvent) {
@@ -59,7 +88,7 @@ export default function HomePage() {
   const cats = categories.length ? categories : FALLBACK_CATEGORIES;
 
   const heroImage = useMemo(() => {
-    return heroListing?.primary_image || heroListing?.images?.[0] || null;
+    return heroListing?.primary_image || heroListing?.images?.[0] || UI_PHOTOS.hero;
   }, [heroListing]);
 
   return (
@@ -67,31 +96,30 @@ export default function HomePage() {
       {/* ── Cinematic hero ── */}
       <section className="relative min-h-[100svh] overflow-hidden bg-ink text-white">
         <div className="absolute inset-0">
-          {heroImage ? (
-            <Image
-              src={heroImage}
-              alt=""
-              fill
-              priority
-              sizes="100vw"
-              className="object-cover opacity-55"
-            />
-          ) : (
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_20%,#44403c,transparent_50%),radial-gradient(ellipse_at_80%_10%,#a1620733,transparent_40%),linear-gradient(160deg,#0c0a09,#1c1917_55%,#292524)]" />
-          )}
+          <SafeImage
+            src={heroImage}
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover opacity-55"
+          />
           <div className="absolute inset-0 bg-gradient-to-b from-ink/55 via-ink/35 to-ink/90" />
         </div>
 
         <div className="page-shell relative z-10 flex min-h-[100svh] flex-col justify-end pb-16 pt-28 sm:pb-24 sm:pt-32">
-          <p className="eyebrow animate-fade-up text-white/60">Ethiopia · Second-hand · Editorial</p>
-          <h1 className="mt-4 max-w-5xl font-display text-hero font-medium animate-fade-up [animation-delay:80ms]">
-            The market,
+          <p className="eyebrow animate-fade-up text-white/70">Addis Ababa · Merkato · ETB</p>
+          <p className="notranslate mt-3 text-sm font-medium tracking-wide text-et-yellow animate-fade-up [animation-delay:40ms]">
+            ሱቅ — Ethiopia&apos;s second-hand market
+          </p>
+          <h1 className="mt-3 max-w-5xl font-display text-hero font-medium animate-fade-up [animation-delay:80ms]">
+            Your next find
             <br />
-            reimagined.
+            is already here.
           </h1>
-          <p className="mt-6 max-w-xl text-base leading-relaxed text-white/70 animate-fade-up sm:text-lg [animation-delay:140ms]">
-            Discover considered objects from local sellers — message directly, buy with secure
-            checkout, and sell what no longer fits your life.
+          <p className="mt-6 max-w-xl text-base leading-relaxed text-white/75 animate-fade-up sm:text-lg [animation-delay:140ms]">
+            Used phones, kemis, furniture, and more from sellers in Addis, Jimma, and Hawassa.
+            Chat in-app. Pay in ETB.
           </p>
 
           <form
@@ -107,8 +135,8 @@ export default function HomePage() {
                 id="home-search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search phones, furniture, bikes…"
-                className="w-full border-0 border-b border-white/35 bg-transparent py-3 pl-7 pr-3 text-white outline-none placeholder:text-white/45 focus:border-accent-400"
+                placeholder="Search Galaxy, kemis, mitad…"
+                className="w-full border-0 border-b border-white/35 bg-transparent py-3 pl-7 pr-3 text-white outline-none placeholder:text-white/45 focus:border-et-yellow"
               />
             </div>
             <Button type="submit" variant="secondary" className="shrink-0">
@@ -118,7 +146,7 @@ export default function HomePage() {
 
           <div className="mt-10 flex flex-wrap items-center gap-6 text-xs uppercase tracking-[0.18em] text-white/50 animate-fade-up [animation-delay:260ms]">
             <Link href="/listings" className="inline-flex items-center gap-2 hover:text-white">
-              Enter the shop <ArrowRight className="h-3.5 w-3.5" />
+              Browse the suq <ArrowRight className="h-3.5 w-3.5" />
             </Link>
             <Link href="/auth/register" className="inline-flex items-center gap-2 hover:text-white">
               Start selling <ArrowDownRight className="h-3.5 w-3.5" />
@@ -140,7 +168,7 @@ export default function HomePage() {
             <div className="mb-8 flex items-end justify-between gap-4">
               <div>
                 <p className="eyebrow">Browse</p>
-                <h2 className="mt-2 font-display text-display font-medium">Categories</h2>
+                <h2 className="mt-2 font-display text-display font-medium">Shop by type</h2>
               </div>
               <Link href="/listings" className="hidden text-xs font-semibold uppercase tracking-[0.16em] text-muted hover:text-ink sm:inline">
                 View all
@@ -152,9 +180,17 @@ export default function HomePage() {
               <Link
                 key={cat.id}
                 href={`/listings?category_id=${cat.id}`}
-                className="group relative block min-w-[70vw] snap-start overflow-hidden bg-ink sm:min-w-[18rem]"
+                className="group relative block min-w-[70vw] snap-start overflow-hidden rounded-xl bg-ink sm:min-w-[18rem]"
               >
-                <div className="aspect-[4/5] bg-gradient-to-br from-stone-700 to-ink transition duration-700 group-hover:scale-105" />
+                <div className="relative aspect-[4/5]">
+                  <SafeImage
+                    src={categoryPhoto(cat.name)}
+                    alt=""
+                    fill
+                    sizes="(max-width:640px) 70vw, 18rem"
+                    className="object-cover opacity-80 transition duration-700 group-hover:scale-105"
+                  />
+                </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/20 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-5">
                   <p className="text-[10px] uppercase tracking-[0.2em] text-white/50">0{i + 1}</p>
@@ -171,10 +207,10 @@ export default function HomePage() {
         <div className="page-shell">
           <Reveal>
             <div className="mb-10 max-w-2xl">
-              <p className="eyebrow">Featured collection</p>
-              <h2 className="mt-2 font-display text-display font-medium">Objects with a story</h2>
+              <p className="eyebrow">On the suq</p>
+              <h2 className="mt-2 font-display text-display font-medium">Live finds</h2>
               <p className="mt-3 text-sm leading-relaxed text-muted sm:text-base">
-                A curated cut of what&apos;s live on SuqET right now — larger pieces first, then supporting finds.
+                Phones, kemis, furniture, and more — priced in ETB from sellers across Ethiopia.
               </p>
             </div>
           </Reveal>
@@ -201,26 +237,36 @@ export default function HomePage() {
           )}
 
           {!loading && featured.length === 0 && !error && (
-            <p className="border border-dashed border-border px-6 py-16 text-center text-sm text-muted">
-              No listings yet.{' '}
-              <Link href="/auth/register" className="underline underline-offset-4">
-                Be the first to list
-              </Link>
-              .
-            </p>
+            <div className="grid gap-4 lg:grid-cols-12 lg:gap-6">
+              <Reveal className="lg:col-span-7" delayMs={40}>
+                <ListingCard
+                  listing={catalogAsListing(DEMO_CATALOG[0], 0)}
+                  href={catalogHref(DEMO_CATALOG[0])}
+                  priority
+                  size="featured"
+                />
+              </Reveal>
+              <div className="grid gap-4 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-1 lg:gap-6">
+                {DEMO_CATALOG.slice(1, 3).map((item, i) => (
+                  <Reveal key={item.title} delayMs={80 + i * 60}>
+                    <ListingCard listing={catalogAsListing(item, i + 1)} href={catalogHref(item)} />
+                  </Reveal>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </section>
 
       {/* ── Trending carousel ── */}
-      {trending.length > 0 && (
+      {(trending.length > 0 || (!loading && listings.length === 0 && !error)) && (
         <section className="section-pad border-y border-border bg-stone-100/80">
           <div className="page-shell">
             <Reveal>
               <div className="mb-2 flex flex-wrap items-end justify-between gap-4">
                 <div>
                   <p className="eyebrow">Trending</p>
-                  <h2 className="mt-2 font-display text-display font-medium">In motion</h2>
+                  <h2 className="mt-2 font-display text-display font-medium">What people are browsing</h2>
                 </div>
                 <Link
                   href="/listings"
@@ -231,11 +277,21 @@ export default function HomePage() {
               </div>
             </Reveal>
             <Carousel label="Trending listings">
-              {trending.map((l) => (
-                <div key={l.id} className="min-w-[72vw] sm:min-w-[16rem] lg:min-w-[18rem]">
-                  <ListingCard listing={l} size="compact" />
-                </div>
-              ))}
+              {(trending.length > 0
+                ? trending.map((l) => (
+                    <div key={l.id} className="min-w-[72vw] sm:min-w-[16rem] lg:min-w-[18rem]">
+                      <ListingCard listing={l} size="compact" />
+                    </div>
+                  ))
+                : DEMO_CATALOG.slice(0, 10).map((item, i) => (
+                    <div key={item.title} className="min-w-[72vw] sm:min-w-[16rem] lg:min-w-[18rem]">
+                      <ListingCard
+                        listing={catalogAsListing(item, i)}
+                        href={catalogHref(item)}
+                        size="compact"
+                      />
+                    </div>
+                  )))}
             </Carousel>
           </div>
         </section>
@@ -245,24 +301,20 @@ export default function HomePage() {
       <section className="relative overflow-hidden">
         <div className="grid lg:grid-cols-2">
           <div className="relative min-h-[22rem] bg-stone-300 lg:min-h-[32rem]">
-            {listings[1]?.primary_image || listings[1]?.images?.[0] ? (
-              <Image
-                src={(listings[1].primary_image || listings[1].images[0]) as string}
-                alt=""
-                fill
-                className="object-cover"
-                sizes="(max-width:1024px) 100vw, 50vw"
-              />
-            ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-stone-400 to-stone-700" />
-            )}
+            <SafeImage
+              src={listings[1]?.primary_image || listings[1]?.images?.[0] || UI_PHOTOS.sell}
+              alt=""
+              fill
+              className="object-cover"
+              sizes="(max-width:1024px) 100vw, 50vw"
+            />
           </div>
           <div className="flex flex-col justify-center bg-paper px-6 py-16 sm:px-12 lg:px-16">
             <Reveal>
               <p className="eyebrow">For sellers</p>
-              <h2 className="mt-3 font-display text-display font-medium">Turn unused into opportunity</h2>
+              <h2 className="mt-3 font-display text-display font-medium">Sell what you no longer need</h2>
               <p className="mt-4 max-w-md text-sm leading-relaxed text-muted sm:text-base">
-                List in minutes, chat with buyers in-app, and settle through secure checkout — built for how Ethiopia trades.
+                List in minutes, chat with buyers, and get paid in ETB — built for how Ethiopia already trades.
               </p>
               <div className="mt-8">
                 <Link href="/auth/register">
@@ -275,7 +327,7 @@ export default function HomePage() {
       </section>
 
       {/* ── New arrivals grid ── */}
-      {arrivals.length > 0 && (
+      {(arrivals.length > 0 || (!loading && listings.length === 0 && !error)) && (
         <section className="section-pad">
           <div className="page-shell">
             <Reveal>
@@ -290,10 +342,37 @@ export default function HomePage() {
               </div>
             </Reveal>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
-              {arrivals.map((l, i) => (
-                <Reveal key={l.id} delayMs={i * 40}>
-                  <ListingCard listing={l} />
-                </Reveal>
+              {arrivals.length > 0
+                ? arrivals.map((l, i) => (
+                    <Reveal key={l.id} delayMs={i * 40}>
+                      <ListingCard listing={l} />
+                    </Reveal>
+                  ))
+                : DEMO_CATALOG.slice(10).map((item, i) => (
+                    <Reveal key={item.title} delayMs={i * 40}>
+                      <ListingCard
+                        listing={catalogAsListing(item, i + 10)}
+                        href={catalogHref(item)}
+                      />
+                    </Reveal>
+                  ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {recent.length > 0 && (
+        <section className="section-pad border-t border-border">
+          <div className="page-shell">
+            <Reveal>
+              <div className="mb-8">
+                <p className="eyebrow">You</p>
+                <h2 className="mt-2 font-display text-display font-medium">Recently viewed</h2>
+              </div>
+            </Reveal>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              {recent.map((l) => (
+                <ListingCard key={l.id} listing={l} size="compact" />
               ))}
             </div>
           </div>
@@ -304,9 +383,9 @@ export default function HomePage() {
       <section className="border-t border-border">
         <div className="page-shell grid gap-8 py-14 sm:grid-cols-3 sm:py-16">
           {[
-            { t: 'Secure checkout', d: 'Pay through SuqET with order status tracked in the app.' },
+            { t: 'Pay in ETB', d: 'Checkout through SuqET with order status tracked in the app.' },
             { t: 'Verified sellers', d: 'KYC-reviewed sellers earn a verified mark buyers can trust.' },
-            { t: 'Direct messaging', d: 'Talk condition, meetup, and offers without leaving the listing.' },
+            { t: 'Chat in-app', d: 'Talk condition, meetup, and offers without leaving the listing.' },
           ].map((item, i) => (
             <Reveal key={item.t} delayMs={i * 70}>
               <p className="font-display text-2xl font-medium">{item.t}</p>

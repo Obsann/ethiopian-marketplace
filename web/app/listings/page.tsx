@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/Input';
 import { Alert } from '@/components/ui/Alert';
 import { ListingCardSkeleton } from '@/components/ui/Skeleton';
 import { Reveal } from '@/components/Reveal';
+import { getRecent, recentAsListing } from '@/lib/recent';
 
 const selectClass = 'field cursor-pointer';
 
@@ -49,6 +50,7 @@ function ListingsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [recent, setRecent] = useState<Listing[]>([]);
 
   const filters = useMemo(
     () => ({
@@ -107,6 +109,10 @@ function ListingsContent() {
       .catch((e) => setError(e.message || 'Failed to load'))
       .finally(() => setLoading(false));
   }, [filters]);
+
+  useEffect(() => {
+    setRecent(getRecent().slice(0, 4).map(recentAsListing));
+  }, []);
 
   const filterPanel = (
     <aside className="space-y-5 border border-border bg-surface p-5">
@@ -251,6 +257,16 @@ function ListingsContent() {
                   Next
                 </Button>
               </div>
+            )}
+            {recent.length > 0 && (
+              <section className="mt-12 border-t border-border pt-10">
+                <h2 className="font-display text-2xl font-medium">Recently viewed</h2>
+                <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+                  {recent.map((l) => (
+                    <ListingCard key={l.id} listing={l} size="compact" />
+                  ))}
+                </div>
+              </section>
             )}
           </div>
         </div>

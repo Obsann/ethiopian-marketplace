@@ -15,13 +15,15 @@ export async function api<T>(
   options: RequestInit & { token?: string | null } = {}
 ): Promise<ApiResponse<T>> {
   const { token, headers, ...rest } = options;
+  const isForm = rest.body instanceof FormData;
+  const hasJsonBody = rest.body !== undefined && rest.body !== null && !isForm;
   let res: Response;
   try {
     res = await fetch(`${API_URL}${path}`, {
       ...rest,
       credentials: 'include',
       headers: {
-        ...(rest.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+        ...(hasJsonBody ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...headers,
       },

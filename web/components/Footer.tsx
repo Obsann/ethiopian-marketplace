@@ -14,8 +14,8 @@ export function Footer() {
             Suq<span className="text-accent-400">ET</span>
           </p>
           <p className="mt-4 max-w-md text-sm leading-relaxed text-white/55">
-            An editorial marketplace for second-hand goods across Ethiopia — discover, message, and
-            check out with confidence.
+            Ethiopia&apos;s second-hand suq — buy and sell used goods in ETB, message sellers, and
+            check out in-app.
           </p>
         </div>
         <div>
@@ -37,6 +37,11 @@ export function Footer() {
                 className="hover:text-white"
               >
                 List an item
+              </Link>
+            </li>
+            <li>
+              <Link href="/saved" className="hover:text-white">
+                Saved
               </Link>
             </li>
           </ul>
@@ -76,6 +81,21 @@ export function Footer() {
                 </li>
               </>
             )}
+            <li>
+              <Link href="/legal/faq" className="hover:text-white">
+                FAQ
+              </Link>
+            </li>
+            <li>
+              <Link href="/legal/terms" className="hover:text-white">
+                Terms
+              </Link>
+            </li>
+            <li>
+              <Link href="/legal/privacy" className="hover:text-white">
+                Privacy
+              </Link>
+            </li>
           </ul>
         </div>
       </div>

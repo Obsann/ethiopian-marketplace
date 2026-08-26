@@ -185,6 +185,12 @@ Also seeded: `tigist@seller.et`, `dawit@seller.et`, `yonas@buyer.et`, `hanna@buy
 docker compose up -d
 ```
 
+From the **repo root** (`ethiopian-marketplace/`), not `backend/`. Requires **Docker Desktop** running on Windows.
+
+If you see `Can't reach database server at localhost:5432`: Postgres is not up. Start Docker Desktop, then re-run `docker compose up -d`, wait a few seconds, then `npx prisma migrate dev` in `backend/`.
+
+**Alternative (temporary):** point `backend/.env` `DATABASE_URL` at your Render Postgres **External Database URL** (not Internal). Append `?sslmode=require` if missing. Warning: this is shared with production/demo data — prefer local Docker for day-to-day work.
+
 ### 2. Backend — http://localhost:4000
 
 ```bash

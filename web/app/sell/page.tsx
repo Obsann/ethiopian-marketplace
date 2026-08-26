@@ -31,6 +31,10 @@ export default function SellPage() {
     price: '',
     location: '',
   });
+  const [meetupOk, setMeetupOk] = useState(true);
+  const [deliveryOk, setDeliveryOk] = useState(false);
+  const [deliveryFee, setDeliveryFee] = useState('');
+  const [size, setSize] = useState('');
 
   useEffect(() => {
     if (!isLoading && !user) router.replace('/auth/login?next=/sell');
@@ -57,6 +61,10 @@ export default function SellPage() {
     try {
       const body = new FormData();
       Object.entries(form).forEach(([k, v]) => body.append(k, v));
+      body.append('meetup_ok', meetupOk ? 'true' : 'false');
+      body.append('delivery_ok', deliveryOk ? 'true' : 'false');
+      if (deliveryOk && deliveryFee) body.append('delivery_fee', deliveryFee);
+      if (size.trim()) body.append('size', size.trim());
       files.forEach((f) => body.append('images', f));
       const res = await api<{ id: string }>('/api/listings', {
         method: 'POST',
@@ -176,6 +184,44 @@ export default function SellPage() {
             placeholder="Addis Ababa"
             required
           />
+          {categoryName?.toLowerCase() === 'clothing' && (
+            <Input
+              id="sell-size"
+              label="Size (optional)"
+              value={size}
+              onChange={(e) => setSize(e.target.value)}
+              placeholder="M, 42, tailored…"
+            />
+          )}
+          <label className="flex items-start gap-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={meetupOk}
+              onChange={(e) => setMeetupOk(e.target.checked)}
+            />
+            Meetup in a public place is OK
+          </label>
+          <label className="flex items-start gap-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={deliveryOk}
+              onChange={(e) => setDeliveryOk(e.target.checked)}
+            />
+            I can send the item (buyer pays delivery)
+          </label>
+          {deliveryOk && (
+            <Input
+              id="sell-delivery-fee"
+              label="Delivery fee (ETB)"
+              type="number"
+              min={0}
+              value={deliveryFee}
+              onChange={(e) => setDeliveryFee(e.target.value)}
+              placeholder="0 if you will quote in chat"
+            />
+          )}
           <Button
             type="button"
             onClick={() => setStep(2)}
@@ -201,6 +247,10 @@ export default function SellPage() {
             </span>
             <span className="text-sm font-medium text-ink">Drag & drop or click to upload</span>
             <span className="text-xs text-muted">Up to 5 images (JPG/PNG)</span>
+            <span className="max-w-sm text-xs leading-relaxed text-muted">
+              Photo tips: daylight, whole item in frame, close-ups of wear. For clothing include
+              the size tag and any stains. No heavy filters.
+            </span>
             <input
               type="file"
               accept="image/*"
@@ -264,6 +314,21 @@ export default function SellPage() {
               <dt className="text-muted">Location</dt>
               <dd className="text-ink">{form.location}</dd>
             </div>
+            <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border pb-3">
+              <dt className="text-muted">Handoff</dt>
+              <dd className="text-ink">
+                {meetupOk ? 'Meetup' : 'No meetup'}
+                {deliveryOk
+                  ? ` · Delivery${deliveryFee ? ` (${Number(deliveryFee).toLocaleString()} ETB)` : ''}`
+                  : ''}
+              </dd>
+            </div>
+            {size.trim() && (
+              <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border pb-3">
+                <dt className="text-muted">Size</dt>
+                <dd className="text-ink">{size}</dd>
+              </div>
+            )}
             <div className="flex flex-wrap items-start justify-between gap-2">
               <dt className="text-muted">Photos</dt>
               <dd className="text-ink">{files.length} selected</dd>

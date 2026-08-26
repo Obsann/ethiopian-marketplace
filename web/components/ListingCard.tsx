@@ -1,17 +1,32 @@
-import Image from 'next/image';
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BadgeCheck, Heart } from 'lucide-react';
 import { Listing } from '@/types';
+import { SafeImage } from '@/components/SafeImage';
+import { isSaved, toggleSaved } from '@/lib/saved';
+import { useAuth } from '@/lib/auth';
+import { api } from '@/lib/api';
 
 export function ListingCard({
   listing,
   priority = false,
   size = 'default',
+  href,
 }: {
   listing: Listing;
   priority?: boolean;
   size?: 'default' | 'featured' | 'compact';
+  href?: string;
 }) {
+  const { user, token } = useAuth();
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setSaved(isSaved(listing.id));
+  }, [listing.id]);
+
   const imgs = [
     listing.primary_image || listing.images?.[0],
     listing.images?.[1],
@@ -28,13 +43,13 @@ export function ListingCard({
 
   return (
     <article className={`group relative snap-start ${wrap}`}>
-      <Link href={`/listings/${listing.id}`} className="block cursor-pointer outline-none">
+      <Link href={href || `/listings/${listing.id}`} className="block cursor-pointer outline-none">
         <div
-          className={`relative overflow-hidden bg-stone-200 ${
+          className={`relative overflow-hidden rounded-xl bg-stone-200 ${
             size === 'featured' ? 'aspect-[3/4]' : size === 'compact' ? 'aspect-[3/4]' : 'aspect-[4/5]'
           }`}
         >
-          <Image
+          <SafeImage
             src={primary}
             alt={listing.title}
             fill
@@ -45,7 +60,7 @@ export function ListingCard({
             }`}
           />
           {secondary && (
-            <Image
+            <SafeImage
               src={secondary}
               alt=""
               fill
@@ -56,13 +71,14 @@ export function ListingCard({
           )}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/35 via-transparent to-transparent opacity-80" />
           {listing.seller?.is_verified && (
-            <span className="absolute left-3 top-3 inline-flex items-center gap-1 bg-white/95 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-ink backdrop-blur-sm">
+            <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-ink backdrop-blur-sm">
               <BadgeCheck className="h-3 w-3 text-accent-600" aria-hidden />
               Verified
             </span>
           )}
           <span className="absolute bottom-3 left-3 text-[10px] font-semibold uppercase tracking-wider text-white/90">
             {listing.condition.replace('_', ' ')}
+            {listing.status === 'reserved' || listing.status === 'sold' ? ` · ${listing.status}` : ''}
           </span>
         </div>
         <div className="space-y-1 pt-3">
@@ -81,13 +97,29 @@ export function ListingCard({
       </Link>
       <button
         type="button"
-        className="absolute right-3 top-3 z-10 flex h-9 w-9 cursor-pointer items-center justify-center bg-white/90 text-ink opacity-0 transition duration-300 hover:bg-white group-hover:opacity-100 focus-visible:opacity-100"
-        aria-label="Save for later"
+        className={`absolute right-3 top-3 z-10 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white/90 text-ink opacity-100 transition duration-300 hover:bg-white md:h-9 md:w-9 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 ${
+          saved ? 'text-et-red md:opacity-100' : ''
+        }`}
+        aria-label={saved ? 'Remove from saved' : 'Save for later'}
+        aria-pressed={saved}
         onClick={(e) => {
           e.preventDefault();
+          e.stopPropagation();
+          if (listing.id.startsWith('demo-')) {
+            setSaved(toggleSaved(listing.id));
+            return;
+          }
+          const next = toggleSaved(listing.id);
+          setSaved(next);
+          if (user) {
+            void api(`/api/listings/${listing.id}/save`, {
+              method: next ? 'POST' : 'DELETE',
+              token,
+            }).catch(() => {});
+          }
         }}
       >
-        <Heart className="h-4 w-4" aria-hidden />
+        <Heart className="h-4 w-4" aria-hidden fill={saved ? 'currentColor' : 'none'} />
       </button>
     </article>
   );

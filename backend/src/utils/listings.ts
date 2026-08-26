@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import prisma from '../models/prisma';
+import { toPublicMediaUrl } from './mediaUrl';
 
 export function mapListing(listing: {
   id: string;
@@ -13,12 +14,18 @@ export function mapListing(listing: {
   status: string;
   created_at: Date;
   images?: { url: string; is_primary: boolean }[];
-  seller?: { id: string; name: string; is_verified: boolean };
+  seller?: { id: string; name: string; is_verified: boolean; created_at?: Date };
+  category?: { id: string; name: string } | null;
   view_count?: number;
+  meetup_ok?: boolean;
+  delivery_ok?: boolean;
+  delivery_fee?: Prisma.Decimal | null;
+  size?: string | null;
 }) {
   const images = (listing.images ?? [])
     .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))
-    .map((i) => i.url);
+    .map((i) => toPublicMediaUrl(i.url))
+    .filter(Boolean);
   return {
     id: listing.id,
     seller_id: listing.seller_id,
@@ -31,9 +38,21 @@ export function mapListing(listing: {
     status: listing.status,
     images,
     created_at: listing.created_at.toISOString(),
-    seller: listing.seller,
+    seller: listing.seller
+      ? {
+          id: listing.seller.id,
+          name: listing.seller.name,
+          is_verified: listing.seller.is_verified,
+          created_at: listing.seller.created_at?.toISOString(),
+        }
+      : undefined,
+    category: listing.category ?? undefined,
     view_count: listing.view_count ?? 0,
     primary_image: images[0] ?? null,
+    meetup_ok: listing.meetup_ok ?? true,
+    delivery_ok: listing.delivery_ok ?? false,
+    delivery_fee: listing.delivery_fee != null ? Number(listing.delivery_fee) : null,
+    size: listing.size ?? null,
   };
 }
 

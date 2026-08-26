@@ -46,6 +46,9 @@ _extracted/
 coverage/
 .turbo/
 
-# Local only ? do not publish
+# Local only — do not publish
 CONTRIBUTIONS.md
+backend/scripts/*.jpg
+backend/scripts/*.jpeg
+backend/scripts/*.png
 

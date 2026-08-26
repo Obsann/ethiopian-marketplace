@@ -28,6 +28,10 @@ function OrdersContent() {
   const [items, setItems] = useState<Transaction[]>([]);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
+  const [reviewFor, setReviewFor] = useState('');
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [reviewed, setReviewed] = useState<Record<string, boolean>>({});
   const paid = params.get('paid') === '1';
 
   useEffect(() => {
@@ -54,6 +58,27 @@ function OrdersContent() {
       load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Action failed');
+    } finally {
+      setBusyId('');
+    }
+  }
+
+  async function submitReview(listingId: string, txId: string) {
+    if (!user) return;
+    setBusyId(txId);
+    setError('');
+    try {
+      await api('/api/reviews', {
+        method: 'POST',
+        token,
+        body: JSON.stringify({ listing_id: listingId, rating, comment: comment.trim() }),
+      });
+      setReviewed((r) => ({ ...r, [txId]: true }));
+      setReviewFor('');
+      setComment('');
+      setRating(5);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save review');
     } finally {
       setBusyId('');
     }
@@ -130,7 +155,55 @@ function OrdersContent() {
                         Request refund
                       </Button>
                     )}
+                    {tx.status === 'released' && tx.buyer_id === user.id && !reviewed[tx.id] && (
+                      <Button
+                        variant="outline"
+                        type="button"
+                        onClick={() => setReviewFor(reviewFor === tx.id ? '' : tx.id)}
+                      >
+                        {reviewFor === tx.id ? 'Cancel review' : 'Review seller'}
+                      </Button>
+                    )}
+                    {tx.status === 'released' && tx.buyer_id === user.id && reviewed[tx.id] && (
+                      <p className="text-xs text-muted">Thanks for the review.</p>
+                    )}
                   </div>
+                  {reviewFor === tx.id && (
+                    <form
+                      className="mt-4 space-y-3 border-t border-border pt-4"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void submitReview(tx.listing_id, tx.id);
+                      }}
+                    >
+                      <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+                        Rating
+                        <select
+                          className="field mt-1.5 cursor-pointer"
+                          value={rating}
+                          onChange={(e) => setRating(Number(e.target.value))}
+                        >
+                          {[5, 4, 3, 2, 1].map((n) => (
+                            <option key={n} value={n}>
+                              {n} star{n === 1 ? '' : 's'}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+                        Comment (optional)
+                        <textarea
+                          className="field mt-1.5 min-h-[72px]"
+                          value={comment}
+                          onChange={(e) => setComment(e.target.value)}
+                          maxLength={500}
+                        />
+                      </label>
+                      <Button type="submit" loading={busyId === tx.id}>
+                        Submit review
+                      </Button>
+                    </form>
+                  )}
                 </li>
               );
             })}
