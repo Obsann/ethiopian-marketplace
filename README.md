@@ -1,8 +1,10 @@
 # SuqET
 
-SuqET is an Ethiopian second-hand marketplace where people buy and sell used goods in ETB. It is built around how trade already works in Ethiopia — especially around Merkato and Addis Ababa.
+SuqET is an Ethiopian second-hand marketplace for buying and selling used goods in ETB. It is built around how trade already works on the ground — especially around Merkato and Addis Ababa — with catalog, chat, payment, and handover in one place instead of scattered DMs and cash-only deals.
 
-Buyers browse listings, chat the seller, choose meetup or delivery, and pay in-app.
+Buyers browse a searchable catalog (photos, condition, category, location), save listings, and open a conversation with the seller. Chat is live: ask about the item, make a price offer, and agree on meetup or delivery. When they are ready, they can pay in-app with **Buy now** through Chapa. Funds are held until the seller confirms handover — an escrow-style hold, not an instant payout. After a completed purchase, buyers can leave a review.
+
+Sellers list items with photos, price, and meetup or delivery options, then run the rest from a dashboard: listings, conversations, and orders. Admin reviews seller KYC (ID and face photos) and listing reports so the marketplace stays usable.
 
 | | |
 |---|---|
