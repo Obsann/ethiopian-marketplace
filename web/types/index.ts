@@ -36,7 +36,14 @@ export interface Listing {
   status: ListingStatus;
   images: string[];
   created_at: string;
-  seller?: { id: string; name: string; is_verified: boolean; created_at?: string };
+  seller?: {
+    id: string;
+    name: string;
+    is_verified: boolean;
+    created_at?: string;
+    is_online?: boolean;
+    last_seen_at?: string | null;
+  };
   category?: { id: string; name: string };
   primary_image?: string | null;
   view_count?: number;
@@ -84,6 +91,9 @@ export interface ConversationPreview {
   listing_title: string;
   other_user: { id: string; name: string };
   last_message: Message;
+  last_at?: string;
+  unread?: boolean;
+  unread_count?: number;
 }
 
 export interface SearchFilters {

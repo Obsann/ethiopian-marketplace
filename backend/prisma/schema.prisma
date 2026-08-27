@@ -79,6 +79,7 @@ model User {
   role          Role
   is_verified   Boolean  @default(false)
   email_verified Boolean @default(true)
+  last_seen_at  DateTime?
   created_at    DateTime @default(now())
 
   listings             Listing[]            @relation("SellerListings")

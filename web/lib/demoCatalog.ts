@@ -45,6 +45,8 @@ export type DemoSellerProfile = {
     is_verified: boolean;
     created_at: string;
     role: string;
+    is_online?: boolean;
+    last_seen_at?: string | null;
   };
   stats: {
     active_listings: number;
@@ -102,6 +104,14 @@ export function allDemoListings(): Listing[] {
   return DEMO_CATALOG.map((item, i) => catalogAsListing(item, i));
 }
 
+/** Newest-first grids should open on the Amharic books card (catalog #1). */
+export function pinAmharicBooksFirst(items: Listing[], sort = 'newest'): Listing[] {
+  if (sort && sort !== 'newest') return items;
+  const i = items.findIndex((l) => l.title === 'Amharic Novel Bundle');
+  if (i <= 0) return items;
+  return [items[i], ...items.slice(0, i), ...items.slice(i + 1)];
+}
+
 export function demoListingById(id: string): Listing | null {
   const match = id.match(/^demo-(\d+)$/);
   if (!match) return null;
@@ -130,6 +140,8 @@ export function demoSellerProfile(id: string): DemoSellerProfile | null {
       is_verified: seller.is_verified,
       created_at: seller.created_at,
       role: seller.role,
+      is_online: false,
+      last_seen_at: null,
     },
     stats: {
       active_listings: listings.length,
@@ -223,6 +235,7 @@ export function filterDemoListings(filters: DemoShopFilters, categories: Categor
     items = [...items].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
+    items = pinAmharicBooksFirst(items, 'newest');
   }
 
   return items;

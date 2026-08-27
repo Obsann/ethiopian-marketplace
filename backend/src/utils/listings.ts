@@ -1,6 +1,15 @@
 import { Prisma } from '@prisma/client';
 import prisma from '../models/prisma';
 import { toPublicMediaUrl } from './mediaUrl';
+import { isUserOnline } from './presence';
+
+export const sellerPublicSelect = {
+  id: true,
+  name: true,
+  is_verified: true,
+  created_at: true,
+  last_seen_at: true,
+} as const;
 
 export function mapListing(listing: {
   id: string;
@@ -14,7 +23,13 @@ export function mapListing(listing: {
   status: string;
   created_at: Date;
   images?: { url: string; is_primary: boolean }[];
-  seller?: { id: string; name: string; is_verified: boolean; created_at?: Date };
+  seller?: {
+    id: string;
+    name: string;
+    is_verified: boolean;
+    created_at?: Date;
+    last_seen_at?: Date | null;
+  };
   category?: { id: string; name: string } | null;
   view_count?: number;
   meetup_ok?: boolean;
@@ -44,6 +59,10 @@ export function mapListing(listing: {
           name: listing.seller.name,
           is_verified: listing.seller.is_verified,
           created_at: listing.seller.created_at?.toISOString(),
+          is_online: isUserOnline(listing.seller.id),
+          last_seen_at: listing.seller.last_seen_at
+            ? listing.seller.last_seen_at.toISOString()
+            : null,
         }
       : undefined,
     category: listing.category ?? undefined,

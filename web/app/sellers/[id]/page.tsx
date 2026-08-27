@@ -6,9 +6,11 @@ import Link from 'next/link';
 import { BadgeCheck } from 'lucide-react';
 import { api } from '@/lib/api';
 import { ListingCard } from '@/components/ListingCard';
+import { SellerPresence } from '@/components/SellerPresence';
 import { Spinner } from '@/components/ui/Spinner';
 import { Alert } from '@/components/ui/Alert';
 import { demoSellerProfile } from '@/lib/demoCatalog';
+import { usePeerPresence } from '@/lib/presence';
 import type { Listing, Review } from '@/types';
 
 type SellerPayload = {
@@ -18,6 +20,8 @@ type SellerPayload = {
     is_verified: boolean;
     created_at: string;
     role: string;
+    is_online?: boolean;
+    last_seen_at?: string | null;
   };
   stats: {
     active_listings: number;
@@ -34,6 +38,10 @@ export default function SellerPage() {
   const id = decodeURIComponent(Array.isArray(rawId) ? String(rawId[0] ?? '') : String(rawId || ''));
   const [data, setData] = useState<SellerPayload | null>(null);
   const [error, setError] = useState('');
+  const presence = usePeerPresence(data?.seller.id || id, {
+    is_online: data?.seller.is_online,
+    last_seen_at: data?.seller.last_seen_at,
+  });
 
   useEffect(() => {
     if (!id) return;
@@ -89,6 +97,9 @@ export default function SellerPage() {
             ? ` · ${data.stats.rating_avg}★ (${data.stats.rating_count})`
             : ''}
         </p>
+        <div className="mt-2">
+          <SellerPresence isOnline={presence.isOnline} lastSeenAt={presence.lastSeenAt} />
+        </div>
       </div>
       <section>
         <h2 className="font-display text-2xl font-medium">Listings</h2>

@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import prisma from '../models/prisma';
 import { AuthRequest } from '../middleware/auth';
 import { sendSuccess } from '../utils/response';
-import { idsMatchingFullText, mapListing } from '../utils/listings';
+import { idsMatchingFullText, mapListing, sellerPublicSelect } from '../utils/listings';
 
 const CONDITIONS = ['new', 'like_new', 'good', 'fair'] as const;
 
@@ -61,7 +61,7 @@ export async function searchListings(req: AuthRequest, res: Response) {
       orderBy,
       include: {
         images: true,
-        seller: { select: { id: true, name: true, is_verified: true } },
+        seller: { select: sellerPublicSelect },
         category: { select: { id: true, name: true } },
       },
     }),

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Inbox } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { connectSocket } from '@/lib/socket';
 import type { ConversationPreview } from '@/types';
 import { Alert } from '@/components/ui/Alert';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -23,9 +24,19 @@ export default function InboxPage() {
 
   useEffect(() => {
     if (!user) return;
-    api<ConversationPreview[]>('/api/conversations', token ? { token } : {})
-      .then((r) => setItems(r.data))
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'));
+    function load() {
+      api<ConversationPreview[]>('/api/conversations', token ? { token } : {})
+        .then((r) => setItems(r.data))
+        .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'));
+    }
+    load();
+    const socket = connectSocket(token);
+    socket.on('receive_message', load);
+    socket.on('unread_count', load);
+    return () => {
+      socket.off('receive_message', load);
+      socket.off('unread_count', load);
+    };
   }, [user, token]);
 
   if (isLoading || !user) {
@@ -62,6 +73,11 @@ export default function InboxPage() {
               >
                 <p className="font-medium text-ink">
                   {c.other_user.name} · {c.listing_title}
+                  {c.unread_count ? (
+                    <span className="ml-2 bg-accent-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                      {c.unread_count > 9 ? '9+' : c.unread_count}
+                    </span>
+                  ) : null}
                 </p>
                 <p className="mt-1 line-clamp-2 text-sm text-muted">{c.last_message.content}</p>
               </Link>

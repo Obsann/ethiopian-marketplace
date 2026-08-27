@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { Alert } from '@/components/ui/Alert';
 import { CATEGORY_PHOTOS, DEMO_CATALOG, UI_PHOTOS } from '@/lib/uiPhotos';
-import { catalogAsListing, demoListingPath, FALLBACK_CATEGORIES } from '@/lib/demoCatalog';
+import { catalogAsListing, demoListingPath, FALLBACK_CATEGORIES, pinAmharicBooksFirst } from '@/lib/demoCatalog';
 import { getRecent, recentAsListing } from '@/lib/recent';
 
 function categoryPhoto(name: string) {
@@ -47,9 +47,10 @@ export default function HomePage() {
     router.push(q ? `/listings?query=${encodeURIComponent(q)}` : '/listings');
   }
 
-  const featured = listings.slice(0, 3);
-  const trending = listings.slice(0, 8);
-  const arrivals = listings.slice(3, 9);
+  const ordered = pinAmharicBooksFirst(listings);
+  const featured = ordered.slice(0, 3);
+  const trending = ordered.slice(0, 8);
+  const arrivals = ordered.slice(0, 8);
   const cats = categories.length ? categories : FALLBACK_CATEGORIES;
 
   return (
@@ -183,32 +184,26 @@ export default function HomePage() {
           )}
 
           {!loading && featured.length > 0 && (
-            <div className="grid items-start gap-4 lg:grid-cols-12 lg:gap-6">
-              <Reveal className="lg:col-span-7" delayMs={40}>
-                {featured[0] && <ListingCard listing={featured[0]} priority size="featured" />}
-              </Reveal>
-              <div className="grid items-start gap-4 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-1 lg:gap-6">
-                {featured.slice(1, 3).map((l, i) => (
-                  <Reveal key={l.id} delayMs={80 + i * 60}>
-                    <ListingCard listing={l} />
-                  </Reveal>
-                ))}
-              </div>
+            <div className="product-tray">
+              {featured.map((l, i) => (
+                <Reveal key={l.id} delayMs={40 + i * 60}>
+                  <ListingCard listing={l} priority={i === 0} />
+                </Reveal>
+              ))}
             </div>
           )}
 
           {!loading && featured.length === 0 && (
-            <div className="grid items-start gap-4 lg:grid-cols-12 lg:gap-6">
-              <Reveal className="lg:col-span-7" delayMs={40}>
-                <ListingCard listing={catalogAsListing(DEMO_CATALOG[0], 0)} href={demoListingPath(0)} priority size="featured" />
-              </Reveal>
-              <div className="grid items-start gap-4 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-1 lg:gap-6">
-                {DEMO_CATALOG.slice(1, 3).map((item, i) => (
-                  <Reveal key={item.title} delayMs={80 + i * 60}>
-                    <ListingCard listing={catalogAsListing(item, i + 1)} href={demoListingPath(i + 1)} />
-                  </Reveal>
-                ))}
-              </div>
+            <div className="product-tray">
+              {DEMO_CATALOG.slice(0, 3).map((item, i) => (
+                <Reveal key={item.title} delayMs={40 + i * 60}>
+                  <ListingCard
+                    listing={catalogAsListing(item, i)}
+                    href={demoListingPath(i)}
+                    priority={i === 0}
+                  />
+                </Reveal>
+              ))}
             </div>
           )}
         </div>

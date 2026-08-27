@@ -5,11 +5,14 @@ import { usePathname, useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
 import { Menu, Search, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { useUnreadMessages } from '@/lib/unreadMessages';
 import { Button } from './ui/Button';
 import { NotificationsMenu } from './NotificationsMenu';
+import { UnreadBadge } from './UnreadBadge';
 
 export function Navbar() {
   const { user, logout, isLoading } = useAuth();
+  const unreadMessages = useUnreadMessages();
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -86,8 +89,13 @@ export function Navbar() {
             </Link>
           )}
           {!isLoading && user && (
-            <Link href="/inbox" className={link}>
+            <Link
+              href="/inbox"
+              className={`relative inline-flex items-center ${link}`}
+              aria-label={unreadMessages > 0 ? `Inbox, ${unreadMessages} unread` : 'Inbox'}
+            >
               Inbox
+              <UnreadBadge count={unreadMessages} inverted={!solid} />
             </Link>
           )}
         </nav>
@@ -187,7 +195,16 @@ export function Navbar() {
             <Link href="/listings">Shop</Link>
             <Link href="/new">New arrivals</Link>
             <Link href="/saved">Saved</Link>
-            {user && <Link href="/inbox">Inbox</Link>}
+            {user && (
+              <Link href="/inbox" className="relative inline-flex items-center gap-2">
+                Inbox
+                {unreadMessages > 0 && (
+                  <span className="bg-accent-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    {unreadMessages > 9 ? '9+' : unreadMessages}
+                  </span>
+                )}
+              </Link>
+            )}
             {user && <Link href="/orders">Orders</Link>}
             {user?.role === 'seller' && <Link href="/sell">Sell</Link>}
             {(user?.role === 'seller' || user?.role === 'admin') && <Link href="/dashboard">Dashboard</Link>}

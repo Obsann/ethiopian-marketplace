@@ -3,7 +3,7 @@ import prisma from '../models/prisma';
 import { AuthRequest } from '../middleware/auth';
 import { sendError, sendSuccess } from '../utils/response';
 import { messages } from '../utils/messages';
-import { allowSend } from '../socket';
+import { allowSend, emitUnreadCount } from '../socket';
 import { conversationRoom } from '../utils/chatRooms';
 import { toPublicMediaUrl } from '../utils/mediaUrl';
 
@@ -54,7 +54,7 @@ export async function sendMessage(req: AuthRequest, res: Response) {
     return sendError(res, 'Too many messages. Please wait a moment.', 429);
   }
 
-  const listing_id = String(req.body.listing_id || '');
+  const listing_id = String(req.body.listing_id || req.params.listing_id || '');
   const receiver_id = String(req.body.receiver_id || '');
   const content = String(req.body.content || '').trim();
   if (!listing_id || !receiver_id || !content) {
@@ -97,6 +97,7 @@ export async function sendMessage(req: AuthRequest, res: Response) {
       type: 'new_message',
       listing_id,
     });
+    void emitUnreadCount(io, receiver_id);
   }
 
   return sendSuccess(res, mapMessage(message), 'Message sent', 201);
@@ -122,6 +123,7 @@ export async function getConversation(req: AuthRequest, res: Response) {
     orderBy: { created_at: 'asc' },
   });
 
+  const now = new Date();
   await prisma.message.updateMany({
     where: {
       listing_id,
@@ -129,8 +131,23 @@ export async function getConversation(req: AuthRequest, res: Response) {
       receiver_id: req.user.userId,
       read_at: null,
     },
-    data: { read_at: new Date() },
+    data: { read_at: now },
   });
+
+  const io = req.app.get('io');
+  if (io) {
+    const readPayload = {
+      listingId: listing_id,
+      readerId: req.user.userId,
+      read_at: now.toISOString(),
+    };
+    io.to(`user:${withUserId}`).emit('messages_read', readPayload);
+    io.to(conversationRoom(listing_id, req.user.userId, withUserId)).emit(
+      'messages_read',
+      readPayload
+    );
+    void emitUnreadCount(io, req.user.userId);
+  }
 
   return sendSuccess(res, messagesList.map(mapMessage));
 }
@@ -150,6 +167,15 @@ export async function getConversations(req: AuthRequest, res: Response) {
     },
   });
 
+  const unreadGroups = await prisma.message.groupBy({
+    by: ['listing_id', 'sender_id'],
+    where: { receiver_id: userId, read_at: null },
+    _count: { _all: true },
+  });
+  const unreadMap = new Map(
+    unreadGroups.map((row) => [`${row.listing_id}:${row.sender_id}`, row._count._all])
+  );
+
   const seen = new Set<string>();
   const items = [];
   for (const row of rows) {
@@ -158,15 +184,27 @@ export async function getConversations(req: AuthRequest, res: Response) {
     if (seen.has(key)) continue;
     seen.add(key);
     const other = row.sender_id === userId ? row.receiver : row.sender;
+    const unread_count = unreadMap.get(key) ?? 0;
     items.push({
       listing_id: row.listing_id,
       listing_title: row.listing.title,
       other_user: other,
       last_message: mapMessage(row),
+      last_at: row.created_at.toISOString(),
+      unread: unread_count > 0,
+      unread_count,
     });
   }
 
   return sendSuccess(res, items);
+}
+
+export async function getUnreadCount(req: AuthRequest, res: Response) {
+  if (!req.user) return sendError(res, messages.unauthorized, 401);
+  const unread = await prisma.message.count({
+    where: { receiver_id: req.user.userId, read_at: null },
+  });
+  return sendSuccess(res, { unread });
 }
 
 export async function getNotifications(req: AuthRequest, res: Response) {

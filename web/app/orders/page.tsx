@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
+import { OrderTimeline } from '@/components/OrderTimeline';
 
 const tone: Record<string, 'green' | 'amber' | 'gray' | 'red' | 'blue'> = {
   held: 'amber',
@@ -140,6 +141,7 @@ function OrdersContent() {
                     </div>
                     <Badge tone={tone[tx.status] || 'gray'}>{tx.status}</Badge>
                   </div>
+                  <OrderTimeline status={tx.status} createdAt={tx.created_at} />
                   <div className="mt-4 flex flex-wrap gap-2">
                     {tx.status === 'held' && tx.seller_id === user.id && (
                       <Button loading={busyId === tx.id} onClick={() => act('release', tx.id)}>

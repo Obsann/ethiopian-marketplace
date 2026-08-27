@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, LayoutGrid, MessageSquare, PlusCircle, User } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { useUnreadMessages } from '@/lib/unreadMessages';
+import { UnreadBadge } from './UnreadBadge';
 
 const item =
   'flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] transition';
@@ -11,6 +13,7 @@ const item =
 export function MobileTabBar() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const unreadMessages = useUnreadMessages();
 
   function active(href: string) {
     if (href === '/') return pathname === '/';
@@ -39,9 +42,13 @@ export function MobileTabBar() {
         </Link>
         <Link
           href={user ? '/inbox' : '/auth/login'}
-          className={`${item} ${active('/inbox') || active('/chat') ? 'text-ink' : 'text-muted'}`}
+          className={`relative ${item} ${active('/inbox') || active('/chat') ? 'text-ink' : 'text-muted'}`}
+          aria-label={unreadMessages > 0 ? `Inbox, ${unreadMessages} unread` : 'Inbox'}
         >
-          <MessageSquare className="h-5 w-5" aria-hidden />
+          <span className="relative">
+            <MessageSquare className="h-5 w-5" aria-hidden />
+            <UnreadBadge count={unreadMessages} />
+          </span>
           Inbox
         </Link>
         <Link

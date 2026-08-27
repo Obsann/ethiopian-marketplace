@@ -6,23 +6,15 @@ import { useRouter } from 'next/navigation';
 import { MessageSquare } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import type { ConversationPreview } from '@/types';
 import { Alert } from '@/components/ui/Alert';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
 
-interface Conversation {
-  listing_id: string;
-  listing_title: string;
-  other_user: { id: string; name: string };
-  last_message: string;
-  last_at: string;
-  unread: boolean;
-}
-
 export default function InboxPage() {
   const { user, token, isLoading } = useAuth();
   const router = useRouter();
-  const [items, setItems] = useState<Conversation[]>([]);
+  const [items, setItems] = useState<ConversationPreview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -32,7 +24,7 @@ export default function InboxPage() {
 
   useEffect(() => {
     if (!token) return;
-    api<Conversation[]>('/api/conversations', { token })
+    api<ConversationPreview[]>('/api/conversations', { token })
       .then((r) => setItems(r.data))
       .catch((e) => setError(e instanceof Error ? e.message : 'Could not load messages'))
       .finally(() => setLoading(false));
@@ -73,19 +65,18 @@ export default function InboxPage() {
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-medium text-ink">
                     {c.other_user.name}
-                    {c.unread && (
-                      <span
-                        className="ml-2 inline-block h-2 w-2 bg-accent-600 align-middle"
-                        aria-label="Unread"
-                      />
-                    )}
+                    {c.unread_count ? (
+                      <span className="ml-2 bg-accent-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        {c.unread_count > 9 ? '9+' : c.unread_count}
+                      </span>
+                    ) : null}
                   </p>
                   <span className="shrink-0 text-xs text-muted">
-                    {new Date(c.last_at).toLocaleString()}
+                    {new Date(c.last_at || c.last_message.created_at).toLocaleString()}
                   </span>
                 </div>
                 <p className="mt-0.5 truncate text-sm text-muted">{c.listing_title}</p>
-                <p className="mt-1 truncate text-sm text-muted">{c.last_message}</p>
+                <p className="mt-1 truncate text-sm text-muted">{c.last_message.content}</p>
               </Link>
             </li>
           ))}

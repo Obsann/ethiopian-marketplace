@@ -1,8 +1,8 @@
 export function ListingCardSkeleton() {
   return (
-    <div className="min-w-0 w-full max-w-full overflow-hidden" aria-hidden>
-      <div className="max-h-72 w-full overflow-hidden rounded-xl md:max-h-80">
-        <div className="aspect-[4/5] w-full animate-pulse bg-stone-200" />
+    <div className="min-w-0 w-full max-w-full overflow-x-hidden" aria-hidden>
+      <div className="w-full min-w-0 max-w-full overflow-hidden rounded-xl">
+        <div className="aspect-[4/5] w-full max-w-full animate-pulse bg-stone-200" />
       </div>
       <div className="space-y-2 pt-3">
         <div className="h-4 w-3/4 animate-pulse bg-stone-200" />

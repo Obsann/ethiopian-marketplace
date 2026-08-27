@@ -7,7 +7,8 @@ import { sendError, sendSuccess } from '../utils/response';
 import { uploadImageBuffer } from '../utils/cloudinary';
 import { isLikelyImageBuffer } from '../utils/kycStorage';
 import { messages } from '../utils/messages';
-import { idsMatchingFullText, mapListing } from '../utils/listings';
+import { idsMatchingFullText, mapListing, sellerPublicSelect } from '../utils/listings';
+import { emitUnreadCount } from '../socket';
 
 const createSchema = z.object({
   title: z.string().min(3),
@@ -97,7 +98,7 @@ export async function createListing(req: AuthRequest, res: Response) {
     },
     include: {
       images: true,
-      seller: { select: { id: true, name: true, is_verified: true, created_at: true } },
+      seller: { select: sellerPublicSelect },
         category: { select: { id: true, name: true } },
     },
   });
@@ -154,7 +155,7 @@ export async function getListings(req: AuthRequest, res: Response) {
       orderBy,
       include: {
         images: true,
-        seller: { select: { id: true, name: true, is_verified: true, created_at: true } },
+        seller: { select: sellerPublicSelect },
         category: { select: { id: true, name: true } },
       },
     }),
@@ -172,7 +173,7 @@ export async function getListingById(req: AuthRequest, res: Response) {
     where: { id },
     include: {
       images: true,
-      seller: { select: { id: true, name: true, is_verified: true, created_at: true } },
+      seller: { select: sellerPublicSelect },
       category: { select: { id: true, name: true } },
     },
   });
@@ -190,7 +191,7 @@ export async function getListingById(req: AuthRequest, res: Response) {
     data: { view_count: { increment: 1 } },
     include: {
       images: true,
-      seller: { select: { id: true, name: true, is_verified: true, created_at: true } },
+      seller: { select: sellerPublicSelect },
       category: { select: { id: true, name: true } },
     },
   });
@@ -257,7 +258,7 @@ export async function updateListing(req: AuthRequest, res: Response) {
     data,
     include: {
       images: true,
-      seller: { select: { id: true, name: true, is_verified: true, created_at: true } },
+      seller: { select: sellerPublicSelect },
         category: { select: { id: true, name: true } },
     },
   });
@@ -278,7 +279,7 @@ export async function deleteListing(req: AuthRequest, res: Response) {
     data: { status: 'removed' },
     include: {
       images: true,
-      seller: { select: { id: true, name: true, is_verified: true, created_at: true } },
+      seller: { select: sellerPublicSelect },
         category: { select: { id: true, name: true } },
     },
   });
@@ -328,6 +329,7 @@ export async function makeOffer(req: AuthRequest, res: Response) {
       amount,
       listing_id: listing.id,
     });
+    void emitUnreadCount(io, listing.seller_id);
   }
 
   return sendSuccess(res, message, 'Offer sent', 201);

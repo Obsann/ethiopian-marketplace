@@ -15,6 +15,7 @@ import {
   FALLBACK_CATEGORIES,
   filterDemoListings,
   parseShopSearchParams,
+  pinAmharicBooksFirst,
 } from '@/lib/demoCatalog';
 import { getRecent, recentAsListing } from '@/lib/recent';
 
@@ -158,9 +159,12 @@ function ListingsContent() {
   const demoPages = Math.max(1, Math.ceil(demoFiltered.length / pageSize));
   const demoPage = Math.min(pageNum, demoPages);
   const displayPage = useDemo ? demoPage : pageNum;
-  const displayListings = useDemo
-    ? demoFiltered.slice((demoPage - 1) * pageSize, demoPage * pageSize)
-    : liveItems;
+  const displayListings = pinAmharicBooksFirst(
+    useDemo
+      ? demoFiltered.slice((demoPage - 1) * pageSize, demoPage * pageSize)
+      : liveItems,
+    filters.sort || 'newest'
+  );
   const displayTotal = useDemo ? demoFiltered.length : pagination?.total;
   const displayPages = useDemo ? demoPages : pagination?.pages || 0;
   const waiting = liveShopHasItems && loadingLive;

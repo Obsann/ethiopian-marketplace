@@ -102,7 +102,7 @@ if (require.main === module) {
     if (process.env.FORCE_SEED === 'true') {
       try {
         const { runDemoSeed } = await import('./utils/demoSeed');
-        console.log('[startup] FORCE_SEED=true — upserting demo users (listings only if catalog is empty)');
+        console.log('[startup] FORCE_SEED=true — upserting demo users and syncing catalog order');
         await runDemoSeed({ resetListings: false });
       } catch (err) {
         console.error('[startup] FORCE_SEED failed', err);

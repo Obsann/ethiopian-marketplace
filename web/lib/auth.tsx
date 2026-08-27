@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { api, ApiError } from '@/lib/api';
-import { disconnectSocket } from '@/lib/socket';
+import { connectSocket, disconnectSocket } from '@/lib/socket';
 import { syncSavedToApi } from '@/lib/saved';
 import type { User } from '@/types';
 
@@ -61,6 +61,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .finally(() => setIsLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (user) connectSocket(token);
+  }, [user, token]);
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await api<{ user: User; token: string }>('/api/auth/login', {

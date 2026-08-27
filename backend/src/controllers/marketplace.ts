@@ -3,7 +3,8 @@ import { z } from 'zod';
 import prisma from '../models/prisma';
 import { AuthRequest } from '../middleware/auth';
 import { sendError, sendSuccess } from '../utils/response';
-import { mapListing } from '../utils/listings';
+import { mapListing, sellerPublicSelect } from '../utils/listings';
+import { isUserOnline } from '../utils/presence';
 
 export async function getSeller(req: AuthRequest, res: Response) {
   const user = await prisma.user.findUnique({
@@ -14,6 +15,7 @@ export async function getSeller(req: AuthRequest, res: Response) {
       role: true,
       is_verified: true,
       created_at: true,
+      last_seen_at: true,
     },
   });
   if (!user) return sendError(res, 'Seller not found', 404);
@@ -23,7 +25,7 @@ export async function getSeller(req: AuthRequest, res: Response) {
       where: { seller_id: user.id, status: { in: ['active', 'reserved'] } },
       include: {
         images: true,
-        seller: { select: { id: true, name: true, is_verified: true } },
+        seller: { select: sellerPublicSelect },
         category: { select: { id: true, name: true } },
       },
       orderBy: { created_at: 'desc' },
@@ -49,6 +51,8 @@ export async function getSeller(req: AuthRequest, res: Response) {
       role: user.role,
       is_verified: user.is_verified,
       created_at: user.created_at.toISOString(),
+      is_online: isUserOnline(user.id),
+      last_seen_at: user.last_seen_at ? user.last_seen_at.toISOString() : null,
     },
     stats: {
       active_listings: listings.filter((l) => l.status === 'active').length,
@@ -78,7 +82,7 @@ export async function similarListings(req: AuthRequest, res: Response) {
     },
     include: {
       images: true,
-      seller: { select: { id: true, name: true, is_verified: true } },
+      seller: { select: sellerPublicSelect },
       category: { select: { id: true, name: true } },
     },
     take: 6,
@@ -115,7 +119,7 @@ export async function getSaved(req: AuthRequest, res: Response) {
       listing: {
         include: {
           images: true,
-          seller: { select: { id: true, name: true, is_verified: true } },
+          seller: { select: sellerPublicSelect },
           category: { select: { id: true, name: true } },
         },
       },

@@ -53,20 +53,22 @@ export interface CatalogItem {
   size?: string | null;
 }
 
-/** Names match the original SuqET seed catalog. Split between Abebe and Tigist. */
+/** Names match the original SuqET seed catalog. Split between Abebe and Tigist.
+ *  Order is display order: Amharic books is card #1 (top-left), kemis is #2. */
 export const DEMO_CATALOG: CatalogItem[] = [
   {
-    title: 'Samsung Galaxy A14',
-    price: 8500,
-    location: 'Addis Ababa',
-    condition: 'like_new',
-    image: UI_PHOTOS.samsung,
-    category: 'Electronics',
-    seller: 'abebe',
+    title: 'Amharic Novel Bundle',
+    price: 900,
+    location: 'Hawassa',
+    condition: 'fair',
+    image: UI_PHOTOS.books,
+    category: 'Books',
+    seller: 'tigist',
     description:
-      'Lightly used Galaxy A14. Battery is healthy, no cracks on the screen. Charger in the box. We can meet in Bole or Megenagna.',
+      'Five popular Amharic novels. Pages are clean, covers show normal wear. Easy to send within Hawassa or by bus.',
     meetup_ok: true,
-    delivery_ok: false,
+    delivery_ok: true,
+    delivery_fee: 80,
   },
   {
     title: 'Traditional Habesha Kemis',
@@ -84,6 +86,19 @@ export const DEMO_CATALOG: CatalogItem[] = [
     size: 'M',
   },
   {
+    title: 'Samsung Galaxy A14',
+    price: 8500,
+    location: 'Addis Ababa',
+    condition: 'like_new',
+    image: UI_PHOTOS.samsung,
+    category: 'Electronics',
+    seller: 'abebe',
+    description:
+      'Lightly used Galaxy A14. Battery is healthy, no cracks on the screen. Charger in the box. We can meet in Bole or Megenagna.',
+    meetup_ok: true,
+    delivery_ok: false,
+  },
+  {
     title: 'Wooden Coffee Table',
     price: 6500,
     location: 'Jimma',
@@ -95,20 +110,6 @@ export const DEMO_CATALOG: CatalogItem[] = [
       'Solid wood table, a few light scratches. Pickup in Jimma — too heavy to ship unless we agree in chat.',
     meetup_ok: true,
     delivery_ok: false,
-  },
-  {
-    title: 'Amharic Novel Bundle',
-    price: 900,
-    location: 'Hawassa',
-    condition: 'fair',
-    image: UI_PHOTOS.books,
-    category: 'Books',
-    seller: 'tigist',
-    description:
-      'Five popular Amharic novels. Pages are clean, covers show normal wear. Easy to send within Hawassa or by bus.',
-    meetup_ok: true,
-    delivery_ok: true,
-    delivery_fee: 80,
   },
   {
     title: 'Yamaha Motorcycle Helmet',

@@ -23,11 +23,13 @@ import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { Alert } from '@/components/ui/Alert';
 import { ListingChat } from '@/components/ListingChat';
+import { SellerPresence } from '@/components/SellerPresence';
 import { Reveal } from '@/components/Reveal';
 import { SafeImage } from '@/components/SafeImage';
 import { ListingCard } from '@/components/ListingCard';
 import { pushRecent, getRecent, recentAsListing } from '@/lib/recent';
 import { isSaved, toggleSaved } from '@/lib/saved';
+import { usePeerPresence } from '@/lib/presence';
 import {
   demoListingById,
   isDemoListingId,
@@ -58,6 +60,10 @@ function ListingDetail() {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
   const [saved, setSaved] = useState(false);
+  const sellerPresence = usePeerPresence(listing?.seller?.id, {
+    is_online: listing?.seller?.is_online,
+    last_seen_at: listing?.seller?.last_seen_at,
+  });
 
   useEffect(() => {
     if (!id) return;
@@ -326,6 +332,11 @@ function ListingDetail() {
                     )}
                     {listing.seller.name}
                     {listing.seller.is_verified ? ' · Verified' : ''}
+                    <SellerPresence
+                      className="ml-1"
+                      isOnline={sellerPresence.isOnline}
+                      lastSeenAt={sellerPresence.lastSeenAt}
+                    />
                   </Link>
                 )}
               </div>
@@ -476,7 +487,14 @@ function ListingDetail() {
 
       <div className="page-shell space-y-8 pb-20">
         {showChat ? (
-          <ListingChat listingId={listing.id} sellerId={listing.seller_id} peerId={peerId} />
+          <ListingChat
+            listingId={listing.id}
+            sellerId={listing.seller_id}
+            peerId={peerId}
+            peerName={listing.seller?.name}
+            initialOnline={listing.seller?.is_online}
+            initialLastSeen={listing.seller?.last_seen_at}
+          />
         ) : listing.status !== 'active' && listing.status !== 'reserved' && !isOwn ? (
           <Alert tone="info">
             This listing is no longer available.{' '}

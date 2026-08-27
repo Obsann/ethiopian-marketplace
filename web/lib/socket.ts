@@ -16,6 +16,9 @@ export function connectSocket(token?: string | null): Socket {
     withCredentials: true,
     auth: token ? { token } : {},
   });
+  socket.on('connect', () => {
+    socket?.emit('user_online');
+  });
   return socket;
 }
 

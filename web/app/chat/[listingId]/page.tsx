@@ -1,17 +1,16 @@
 'use client';
 
-import { FormEvent, Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { io, Socket } from 'socket.io-client';
-import { MessageSquare } from 'lucide-react';
-import { api, getApiUrl } from '@/lib/api';
+import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { Listing, Message } from '@/types';
+import { Listing } from '@/types';
 import { Alert } from '@/components/ui/Alert';
-import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
+import { ListingChat } from '@/components/ListingChat';
+import { MessageSquare } from 'lucide-react';
 
 function ChatView() {
   const { listingId } = useParams<{ listingId: string }>();
@@ -21,15 +20,8 @@ function ChatView() {
   const withUserId = params.get('with') || '';
 
   const [listing, setListing] = useState<Listing | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [draft, setDraft] = useState('');
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState('');
-
-  const socketRef = useRef<Socket | null>(null);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -37,10 +29,6 @@ function ChatView() {
       router.replace(`/auth/login?next=${encodeURIComponent(next)}`);
     }
   }, [user, isLoading, router, listingId, withUserId]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   useEffect(() => {
     if (!token || !withUserId || !listingId) {
@@ -53,16 +41,9 @@ function ChatView() {
 
     let cancelled = false;
     setLoading(true);
-    Promise.all([
-      api<Message[]>(`/api/messages/${listingId}?with=${encodeURIComponent(withUserId)}`, {
-        token,
-      }),
-      api<Listing>(`/api/listings/${listingId}?count_view=0`).catch(() => null),
-    ])
-      .then(([msgRes, listingRes]) => {
-        if (cancelled) return;
-        setMessages(msgRes.data);
-        if (listingRes) setListing(listingRes.data);
+    api<Listing>(`/api/listings/${listingId}?count_view=0`)
+      .then((listingRes) => {
+        if (!cancelled) setListing(listingRes.data);
       })
       .catch((e) => {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load chat');
@@ -75,62 +56,6 @@ function ChatView() {
       cancelled = true;
     };
   }, [token, listingId, withUserId, isLoading, user]);
-
-  useEffect(() => {
-    if (!token || !user || !listingId || !withUserId) return;
-
-    const socket = io(getApiUrl(), { auth: { token } });
-    socketRef.current = socket;
-
-    socket.on('connect', () => {
-      socket.emit('join_room', { listingId, userId: user.id });
-    });
-
-    socket.on('receive_message', (incoming: Message) => {
-      const mine = incoming.sender_id === user.id && incoming.receiver_id === withUserId;
-      const theirs = incoming.sender_id === withUserId && incoming.receiver_id === user.id;
-      if (!mine && !theirs) return;
-      if (incoming.listing_id && incoming.listing_id !== listingId) return;
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === incoming.id)) return prev;
-        return [...prev, incoming];
-      });
-    });
-
-    return () => {
-      socket.disconnect();
-      socketRef.current = null;
-    };
-  }, [token, user, listingId, withUserId]);
-
-  async function send(e: FormEvent) {
-    e.preventDefault();
-    const content = draft.trim();
-    if (!content || !user || !token || !withUserId) return;
-    if (withUserId === user.id) {
-      setSendError('Open Messages to reply to the other person.');
-      return;
-    }
-    setSending(true);
-    setSendError('');
-    try {
-      const res = await api<Message>(`/api/messages/${listingId}`, {
-        method: 'POST',
-        token,
-        body: JSON.stringify({ receiver_id: withUserId, content }),
-      });
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === res.data.id)) return prev;
-        return [...prev, res.data];
-      });
-      setDraft('');
-      socketRef.current?.emit('join_room', { listingId, userId: user.id });
-    } catch (err) {
-      setSendError(err instanceof Error ? err.message : 'Could not send');
-    } finally {
-      setSending(false);
-    }
-  }
 
   if (isLoading || loading) {
     return (
@@ -162,6 +87,23 @@ function ChatView() {
     );
   }
 
+  if (!user || !withUserId) {
+    return (
+      <div className="page-shell pt-24 sm:pt-28 pb-16">
+        <EmptyState
+          icon={MessageSquare}
+          title="Open a conversation"
+          description="Pick a thread from Inbox to keep chatting."
+          actionHref="/inbox"
+          actionLabel="Open inbox"
+        />
+      </div>
+    );
+  }
+
+  const peerName =
+    listing?.seller_id === withUserId ? listing.seller?.name : undefined;
+
   return (
     <div className="page-shell pt-24 sm:pt-28 pb-16">
       <div className="flex h-[calc(100vh-9rem)] flex-col overflow-hidden border border-border bg-surface">
@@ -183,49 +125,17 @@ function ChatView() {
             </Link>
           </div>
         </div>
-
-        <div className="flex-1 space-y-3 overflow-y-auto bg-paper px-3 py-4 sm:px-5">
-          {messages.length === 0 && (
-            <EmptyState
-              icon={MessageSquare}
-              title="No messages yet"
-              description="Say hello to start the conversation."
-            />
-          )}
-          {messages.map((m) => {
-            const mine = m.sender_id === user?.id;
-            return (
-              <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-[85%] px-3 py-2 text-sm ${
-                    mine ? 'bg-ink text-white' : 'border border-border bg-surface text-ink'
-                  }`}
-                >
-                  <p className="whitespace-pre-wrap break-words">{m.content}</p>
-                </div>
-              </div>
-            );
-          })}
-          <div ref={bottomRef} />
-        </div>
-
-        <form onSubmit={send} className="flex gap-2 border-t border-border bg-surface p-3 sm:p-4">
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Type a message…"
-            aria-label="Message"
-            className="field min-w-0 flex-1"
-          />
-          <Button type="submit" disabled={!draft.trim()} loading={sending} className="shrink-0">
-            Send
-          </Button>
-        </form>
-        {sendError && (
-          <div className="px-3 pb-3 sm:px-4">
-            <Alert tone="error">{sendError}</Alert>
-          </div>
-        )}
+        <ListingChat
+          listingId={listingId}
+          sellerId={listing?.seller_id || withUserId}
+          peerId={withUserId}
+          peerName={peerName}
+          variant="full"
+          initialOnline={listing?.seller_id === withUserId ? listing.seller?.is_online : undefined}
+          initialLastSeen={
+            listing?.seller_id === withUserId ? listing.seller?.last_seen_at : undefined
+          }
+        />
       </div>
     </div>
   );

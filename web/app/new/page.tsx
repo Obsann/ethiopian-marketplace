@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 import { ListingCard } from '@/components/ListingCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ListingCardSkeleton } from '@/components/ui/Skeleton';
-import { allDemoListings } from '@/lib/demoCatalog';
+import { allDemoListings, pinAmharicBooksFirst } from '@/lib/demoCatalog';
 import type { Listing } from '@/types';
 
 export default function NewArrivalsPage() {
@@ -19,10 +19,10 @@ export default function NewArrivalsPage() {
       .then((r) => {
         if (cancelled) return;
         const live = Array.isArray(r.data?.items) ? r.data.items : [];
-        setItems(live.length > 0 ? live : allDemoListings());
+        setItems(pinAmharicBooksFirst(live.length > 0 ? live : allDemoListings()));
       })
       .catch(() => {
-        if (!cancelled) setItems(allDemoListings());
+        if (!cancelled) setItems(pinAmharicBooksFirst(allDemoListings()));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

@@ -14,21 +14,21 @@ const CATEGORY_IDS: Record<string, string> = {
   Other: 'a1b2c3d4-e5f6-7890-abcd-000000000008',
 };
 
-/** Keep in sync with web/lib/uiPhotos.ts DEMO_CATALOG. */
+/** Keep in sync with web/lib/uiPhotos.ts DEMO_CATALOG. Index 0 is newest (Amharic books). */
 const PRODUCTS = [
   {
-    title: 'Samsung Galaxy A14',
+    title: 'Amharic Novel Bundle',
     description:
-      'Lightly used Galaxy A14. Battery is healthy, no cracks on the screen. Charger in the box. We can meet in Bole or Megenagna.',
-    price: 8500,
-    condition: 'like_new' as const,
-    category: 'Electronics',
-    location: 'Addis Ababa',
-    seller: 'abebe' as const,
-    image: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787781697/suqet/ui/samsung-phone.jpg',
+      'Five popular Amharic novels. Pages are clean, covers show normal wear. Easy to send within Hawassa or by bus.',
+    price: 900,
+    condition: 'fair' as const,
+    category: 'Books',
+    location: 'Hawassa',
+    seller: 'tigist' as const,
+    image: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787785916/suqet/ui/amharic-books.jpg',
     meetup_ok: true,
-    delivery_ok: false,
-    delivery_fee: null as number | null,
+    delivery_ok: true,
+    delivery_fee: 80,
     size: null as string | null,
   },
   {
@@ -47,6 +47,21 @@ const PRODUCTS = [
     size: 'M',
   },
   {
+    title: 'Samsung Galaxy A14',
+    description:
+      'Lightly used Galaxy A14. Battery is healthy, no cracks on the screen. Charger in the box. We can meet in Bole or Megenagna.',
+    price: 8500,
+    condition: 'like_new' as const,
+    category: 'Electronics',
+    location: 'Addis Ababa',
+    seller: 'abebe' as const,
+    image: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787781697/suqet/ui/samsung-phone.jpg',
+    meetup_ok: true,
+    delivery_ok: false,
+    delivery_fee: null as number | null,
+    size: null as string | null,
+  },
+  {
     title: 'Wooden Coffee Table',
     description:
       'Solid wood table, a few light scratches. Pickup in Jimma — too heavy to ship unless we agree in chat.',
@@ -59,21 +74,6 @@ const PRODUCTS = [
     meetup_ok: true,
     delivery_ok: false,
     delivery_fee: null,
-    size: null,
-  },
-  {
-    title: 'Amharic Novel Bundle',
-    description:
-      'Five popular Amharic novels. Pages are clean, covers show normal wear. Easy to send within Hawassa or by bus.',
-    price: 900,
-    condition: 'fair' as const,
-    category: 'Books',
-    location: 'Hawassa',
-    seller: 'tigist' as const,
-    image: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787785916/suqet/ui/amharic-books.jpg',
-    meetup_ok: true,
-    delivery_ok: true,
-    delivery_fee: 80,
     size: null,
   },
   {
@@ -353,6 +353,17 @@ async function ensureCategory(name: string, id: string) {
   return prisma.category.create({ data: { id, name } });
 }
 
+/** Newest-first APIs list index 0 first. Keep books as the lead card without wiping listings. */
+async function syncDemoCatalogOrder(sellerIds: string[]) {
+  const now = Date.now();
+  for (let i = 0; i < PRODUCTS.length; i += 1) {
+    await prisma.listing.updateMany({
+      where: { title: PRODUCTS[i].title, seller_id: { in: sellerIds } },
+      data: { created_at: new Date(now - i * 8 * 60 * 60 * 1000) },
+    });
+  }
+}
+
 export async function runDemoSeed(opts?: { resetListings?: boolean }) {
   const resetListings = opts?.resetListings === true;
   const password_hash = await bcrypt.hash('Password123!', 10);
@@ -407,7 +418,8 @@ export async function runDemoSeed(opts?: { resetListings?: boolean }) {
 
   const existingCount = await prisma.listing.count();
   if (!resetListings && existingCount > 0) {
-    console.log('Seed users upserted. Catalog already has listings — left unchanged.');
+    await syncDemoCatalogOrder([abebe.id, tigist.id]);
+    console.log('Seed users upserted. Demo listing timestamps synced (Amharic books first).');
     console.log('Sellers: abebe@seller.et, tigist@seller.et');
     console.log('Buyers:  sara@buyer.et, yonas@buyer.et');
     console.log('Admin:   admin@marketplace.et');
@@ -456,8 +468,8 @@ export async function runDemoSeed(opts?: { resetListings?: boolean }) {
     created.push(listing);
   }
 
-  const phoneListing = created[0];
-  const tableListing = created[2];
+  const phoneListing = created.find((l) => l.title === 'Samsung Galaxy A14');
+  const tableListing = created.find((l) => l.title === 'Wooden Coffee Table');
   if (phoneListing && tableListing) {
     await prisma.message.createMany({
       data: [
