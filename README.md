@@ -17,7 +17,7 @@ Sellers list items with photos, price, and meetup or delivery options, then run 
 - [Architecture](#-architecture)
 - [Quick Start](#-quick-start)
 - [Project Structure](#-project-structure)
-- [Features and API endpoints](#-features-and-api-endpoints)
+- [How it works](#-how-it-works)
 - [Authentication](#-authentication)
 - [Database](#-database)
 - [Contributing](#-contributing)
@@ -136,7 +136,7 @@ ethiopian-marketplace/
         └── utils/              # Chapa, Cloudinary, mail, upload
 ```
 
-## 🔌 Features and API endpoints
+## 🔌 How it works
 
 Prefix: `/api`. Auth: public, JWT, or role-gated (`seller` / `admin`).
 
