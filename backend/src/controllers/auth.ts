@@ -2,6 +2,7 @@ import { Response } from 'express';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import prisma from '../models/prisma';
 import { AuthRequest } from '../middleware/auth';
@@ -22,6 +23,20 @@ import {
   skipEmailVerification,
 } from '../utils/mail';
 import { clearSessionCookie, setSessionCookie } from '../utils/sessionCookie';
+
+/** Auth queries omit last_seen_at so login/register survive if that migrate is still pending. */
+const authUserSelect = {
+  id: true,
+  name: true,
+  email: true,
+  phone: true,
+  role: true,
+  is_verified: true,
+  email_verified: true,
+  password_hash: true,
+  google_id: true,
+  created_at: true,
+} satisfies Prisma.UserSelect;
 
 const registerSchema = z.object({
   name: z.string().min(2),
@@ -154,6 +169,7 @@ export async function register(req: AuthRequest, res: Response) {
   const normalizedEmail = email.toLowerCase();
   const existing = await prisma.user.findFirst({
     where: { OR: [{ email: normalizedEmail }, { phone }] },
+    select: { id: true },
   });
   if (existing) {
     return sendError(res, 'Email or phone already registered', 409);
@@ -170,6 +186,7 @@ export async function register(req: AuthRequest, res: Response) {
       role,
       email_verified: skipVerify,
     },
+    select: authUserSelect,
   });
 
   if (skipVerify) {
@@ -193,6 +210,7 @@ export async function register(req: AuthRequest, res: Response) {
     await prisma.user.update({
       where: { id: user.id },
       data: { email_verified: true },
+      select: { id: true },
     });
     return sendSuccess(res, { emailSent: false }, REGISTER_READY_MESSAGE, 201);
   }
@@ -208,7 +226,7 @@ export async function login(req: AuthRequest, res: Response) {
 
   const email = parsed.data.email.toLowerCase();
   const password = parsed.data.password;
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ where: { email }, select: authUserSelect });
   if (!user) {
     return sendError(res, 'Invalid email or password', 401);
   }
@@ -244,7 +262,7 @@ export async function forgotPassword(req: AuthRequest, res: Response) {
   }
 
   const email = parsed.data.email.toLowerCase();
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ where: { email }, select: { id: true, email: true } });
 
   if (user) {
     const raw = crypto.randomBytes(32).toString('hex');
@@ -280,7 +298,7 @@ export async function resetPassword(req: AuthRequest, res: Response) {
   const token_hash = hashResetToken(parsed.data.token);
   const record = await prisma.passwordResetToken.findUnique({
     where: { token_hash },
-    include: { user: true },
+    include: { user: { select: { id: true } } },
   });
 
   if (!record || record.used_at || record.expires_at < new Date()) {
@@ -292,6 +310,7 @@ export async function resetPassword(req: AuthRequest, res: Response) {
     prisma.user.update({
       where: { id: record.user_id },
       data: { password_hash },
+      select: { id: true },
     }),
     prisma.passwordResetToken.update({
       where: { id: record.id },
@@ -355,8 +374,14 @@ export async function googleCallback(req: AuthRequest, res: Response) {
   const google_id = profile.sub;
   const name = (profile.name || email.split('@')[0]).trim() || 'SuqET user';
 
-  const existingGoogle = await prisma.user.findUnique({ where: { google_id } });
-  const existingEmail = await prisma.user.findUnique({ where: { email } });
+  const existingGoogle = await prisma.user.findUnique({
+    where: { google_id },
+    select: authUserSelect,
+  });
+  const existingEmail = await prisma.user.findUnique({
+    where: { email },
+    select: authUserSelect,
+  });
 
   if (existingGoogle && existingEmail && existingGoogle.id !== existingEmail.id) {
     return oauthRedirect(res, { error: 'This Google account is already linked to another user' });
@@ -372,11 +397,13 @@ export async function googleCallback(req: AuthRequest, res: Response) {
         role,
         email_verified: true,
       },
+      select: authUserSelect,
     });
   } else if (!user.google_id) {
     user = await prisma.user.update({
       where: { id: user.id },
       data: { google_id, email_verified: true },
+      select: authUserSelect,
     });
   }
 
@@ -410,7 +437,7 @@ export async function exchangeOAuth(req: AuthRequest, res: Response) {
 
   const record = await prisma.oAuthExchangeCode.findUnique({
     where: { code_hash },
-    include: { user: true },
+    include: { user: { select: authUserSelect } },
   });
   if (!record) {
     return sendError(res, 'Google sign-in expired. Try again.', 400);
@@ -437,6 +464,7 @@ export async function verifyEmail(req: AuthRequest, res: Response) {
   const user = await prisma.user.update({
     where: { id: record.user_id },
     data: { email_verified: true },
+    select: authUserSelect,
   });
   return sendSuccess(res, issueAuth(res, user), 'Email confirmed. You are logged in.');
 }
@@ -447,12 +475,13 @@ export async function resendVerification(req: AuthRequest, res: Response) {
     return sendError(res, 'Enter a valid email', 400, parsed.error.message);
   }
   const email = parsed.data.email.toLowerCase();
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ where: { email }, select: authUserSelect });
   if (user && !user.email_verified && user.password_hash) {
     if (skipEmailVerification()) {
       await prisma.user.update({
         where: { id: user.id },
         data: { email_verified: true },
+        select: { id: true },
       });
       return sendSuccess(res, {}, REGISTER_READY_MESSAGE);
     }
@@ -476,6 +505,7 @@ export async function resendVerification(req: AuthRequest, res: Response) {
       await prisma.user.update({
         where: { id: user.id },
         data: { email_verified: true },
+        select: { id: true },
       });
       return sendSuccess(res, {}, REGISTER_READY_MESSAGE);
     }
@@ -504,6 +534,7 @@ export async function updateMe(req: AuthRequest, res: Response) {
     const user = await prisma.user.update({
       where: { id: req.user.userId },
       data,
+      select: authUserSelect,
     });
     return sendSuccess(res, { user: publicUser(user) }, 'Profile updated');
   } catch {
@@ -513,7 +544,10 @@ export async function updateMe(req: AuthRequest, res: Response) {
 
 export async function me(req: AuthRequest, res: Response) {
   if (!req.user) return sendSuccess(res, { user: null });
-  const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.userId },
+    select: authUserSelect,
+  });
   if (!user) return sendSuccess(res, { user: null });
   return sendSuccess(res, { user: publicUser(user) });
 }
