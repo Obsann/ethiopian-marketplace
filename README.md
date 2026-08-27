@@ -36,7 +36,7 @@ This README is for **hackathon judges**: what the product is, what the demo prov
 
 - **Not live escrow.** “Released” / “refunded” update **our database**. They do not automatically pay the seller or reverse a real bank transfer.
 - **Chapa is TEST mode** with a real `CHASECK_TEST-…` key. If the key still contains the `xxx` placeholder, Buy Now uses an **in-app mock** checkout — not a bank transfer.
-- Email is optional locally (API returns reset/verify links when mail is unset). On Render use **Resend** (`RESEND_API_KEY`) — outbound SMTP is often blocked.
+- Email: no custom domain required for the demo. Set `SKIP_EMAIL_VERIFICATION=true` on **suqet-api** in Render — signups can log in immediately (we do not pretend a confirmation email was sent). Password reset email is unavailable until you add a verified domain + `EMAIL_FROM`. Resend still works when that is configured.
 
 ---
 
@@ -299,8 +299,9 @@ Split hosting:
 | `CHAPA_WEBHOOK_SECRET` | for webhooks | Dashboard webhook secret |
 | `CHAPA_CALLBACK_URL` | for Chapa | e.g. `https://suqet-api.onrender.com/api/payments/callback` |
 | Cloudinary | optional | Same names as `backend/.env.example` |
-| `RESEND_API_KEY` | for email on Render | From [resend.com/api-keys](https://resend.com/api-keys). Prefer over SMTP (SMTP often blocked). |
-| `EMAIL_FROM` | with Resend | Verified-domain address, e.g. `SuqET <noreply@yourdomain.com>`. Not `*.vercel.app`. Test: `SuqET <onboarding@resend.dev>`. |
+| `SKIP_EMAIL_VERIFICATION` | hackathon/demo | Set `true` on **suqet-api** when you have **no verified domain**. Signups are auto-verified (can log in immediately). Password reset email is unavailable. Blueprint defaults this to `true`. Set `false` once `EMAIL_FROM` is on a Resend-verified domain. |
+| `RESEND_API_KEY` | for email on Render | From [resend.com/api-keys](https://resend.com/api-keys). Prefer over SMTP (SMTP often blocked). Optional while skip-verify is on. |
+| `EMAIL_FROM` | with Resend | Verified-domain address, e.g. `SuqET <noreply@yourdomain.com>`. Not `*.vercel.app`. |
 | SMTP_* | local/dev only | Optional fallback when `RESEND_API_KEY` is unset. |
 | `GOOGLE_CLIENT_ID` | for Google | Web client ID from Google Cloud Console |
 | `GOOGLE_CLIENT_SECRET` | for Google | Web client secret (API only — never in `web/`) |

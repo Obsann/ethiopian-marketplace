@@ -11,7 +11,6 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
-  const [resetUrl, setResetUrl] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: FormEvent) {
@@ -23,11 +22,10 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await api<{ resetUrl?: string }>('/api/auth/forgot-password', {
+      await api('/api/auth/forgot-password', {
         method: 'POST',
         body: JSON.stringify({ email }),
       });
-      setResetUrl(res.data.resetUrl || '');
       setDone(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not send reset email');
@@ -51,17 +49,6 @@ export default function ForgotPasswordPage() {
             <Alert tone="success">
               If that email is registered, we sent a password reset link. Check your inbox.
             </Alert>
-            {resetUrl && (
-              <p className="text-sm text-muted">
-                Demo / local (email was not sent):{' '}
-                <Link
-                  href={resetUrl}
-                  className="break-all cursor-pointer text-accent-600 transition hover:text-accent-700"
-                >
-                  Open reset link
-                </Link>
-              </p>
-            )}
             <Link
               href="/auth/login"
               className="inline-block cursor-pointer text-xs font-semibold uppercase tracking-[0.16em] text-muted transition hover:text-ink"

@@ -25,7 +25,7 @@ interface AuthContextValue {
     phone: string;
     password: string;
     role: 'buyer' | 'seller';
-  }) => Promise<{ verifyUrl?: string; message?: string }>;
+  }) => Promise<{ emailSent?: boolean; message?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password: string;
       role: 'buyer' | 'seller';
     }) => {
-      const res = await api<{ verifyUrl?: string }>('/api/auth/register', {
+      const res = await api<{ emailSent?: boolean }>('/api/auth/register', {
         method: 'POST',
         body: JSON.stringify(payload),
       });

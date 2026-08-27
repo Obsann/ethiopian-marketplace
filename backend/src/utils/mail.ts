@@ -45,6 +45,15 @@ export function isMailConfigured(): boolean {
   return isResendConfigured() || isSmtpConfigured();
 }
 
+/**
+ * Hackathon/demo: skip outbound mail and treat signups as verified.
+ * Set SKIP_EMAIL_VERIFICATION=true on suqet-api in Render when you have no verified domain.
+ */
+export function skipEmailVerification(): boolean {
+  const v = (process.env.SKIP_EMAIL_VERIFICATION || '').trim().toLowerCase();
+  return v === 'true' || v === '1' || v === 'yes';
+}
+
 function isUnusableFrom(configured: string): boolean {
   const inner = configured.match(/<([^>]+)>/)?.[1] || configured;
   return (
@@ -194,7 +203,7 @@ async function sendViaSmtp(opts: {
 /**
  * Prefer Resend when RESEND_API_KEY is set (Render / production).
  * Else SMTP when SMTP_* is set (local/dev).
- * Else log and skip (non-prod callers still return reset/verify URLs).
+ * Throws when nothing is configured so callers can auto-verify or return a demo error.
  */
 async function sendMail(opts: { to: string; subject: string; text: string; html: string }): Promise<void> {
   if (isResendConfigured()) {
@@ -223,7 +232,8 @@ async function sendMail(opts: { to: string; subject: string; text: string; html:
     }
   }
 
-  console.warn(`[mail] No RESEND_API_KEY or SMTP configured. Skip send: ${opts.subject}`);
+  console.warn(`[mail] No RESEND_API_KEY or SMTP configured. Cannot send: ${opts.subject}`);
+  throw new Error('Email is not configured on this server.');
 }
 
 export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {

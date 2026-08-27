@@ -20,7 +20,7 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [verifyUrl, setVerifyUrl] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
   const [done, setDone] = useState(false);
   const [doneMessage, setDoneMessage] = useState('');
 
@@ -42,7 +42,7 @@ export default function RegisterPage() {
     setFormError('');
     try {
       const data = await register(form);
-      setVerifyUrl(data.verifyUrl || '');
+      setEmailSent(Boolean(data.emailSent));
       setDoneMessage(data.message || '');
       setDone(true);
     } catch (err) {
@@ -58,30 +58,27 @@ export default function RegisterPage() {
         <div className="mx-auto max-w-md space-y-8">
           <div>
             <p className="eyebrow">Account</p>
-            <h1 className="mt-3 font-display text-4xl font-medium text-ink">Check your email</h1>
-            <p className="mt-2 text-sm text-muted">Confirm your address to finish signing up.</p>
+            <h1 className="mt-3 font-display text-4xl font-medium text-ink">
+              {emailSent ? 'Check your email' : "You're in"}
+            </h1>
+            <p className="mt-2 text-sm text-muted">
+              {emailSent
+                ? 'Confirm your address to finish signing up.'
+                : 'You can log in now — no confirmation email was sent.'}
+            </p>
           </div>
           <div className="space-y-5 border border-border bg-surface p-6 sm:p-8">
             <Alert tone="success">
               {doneMessage ||
-                `We sent a confirmation link to ${form.email}. Confirm it before you log in.`}
+                (emailSent
+                  ? `We sent a confirmation link to ${form.email}. Confirm it before you log in.`
+                  : "You're in — you can log in now.")}
             </Alert>
-            {verifyUrl && (
-              <p className="text-sm text-muted">
-                Local dev (SMTP not sending):{' '}
-                <Link
-                  href={verifyUrl}
-                  className="break-all cursor-pointer text-accent-600 transition hover:text-accent-700"
-                >
-                  Open confirmation link
-                </Link>
-              </p>
-            )}
             <Link
               href="/auth/login"
               className="inline-block cursor-pointer text-xs font-semibold uppercase tracking-[0.16em] text-muted transition hover:text-ink"
             >
-              Back to log in
+              Log in
             </Link>
           </div>
         </div>

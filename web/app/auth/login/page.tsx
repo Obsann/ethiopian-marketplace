@@ -92,11 +92,13 @@ function LoginForm() {
               className="cursor-pointer text-sm font-medium text-accent-600 transition hover:text-accent-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
               onClick={async () => {
                 try {
-                  await api('/api/auth/resend-verification', {
+                  const res = await api('/api/auth/resend-verification', {
                     method: 'POST',
                     body: JSON.stringify({ email }),
                   });
-                  setFormError('If that account needs confirmation, we sent a new link.');
+                  setFormError(
+                    res.message || 'If that account needs confirmation, we sent a new link.'
+                  );
                 } catch {
                   setFormError('Could not resend confirmation email');
                 }

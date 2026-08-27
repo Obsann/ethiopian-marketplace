@@ -15,7 +15,12 @@ import {
   signOAuthState,
   type OAuthRole,
 } from '../utils/google';
-import { isMailConfigured, resetPasswordUrl, sendPasswordResetEmail, sendVerificationEmail, verifyEmailUrl } from '../utils/mail';
+import {
+  isMailConfigured,
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+  skipEmailVerification,
+} from '../utils/mail';
 import { clearSessionCookie, setSessionCookie } from '../utils/sessionCookie';
 
 const registerSchema = z.object({
@@ -55,6 +60,14 @@ const profileSchema = z.object({
 
 const GENERIC_RESET_MESSAGE =
   'If that email is registered, we sent a password reset link.';
+
+const REGISTER_READY_MESSAGE = "You're in — you can log in now.";
+
+const REGISTER_CHECK_EMAIL_MESSAGE =
+  'Check your email to confirm your account before logging in.';
+
+const DEMO_RESET_UNAVAILABLE =
+  "Password reset email isn't available on this demo. Use a seed account, or sign in if you still know your password.";
 
 function signToken(payload: AuthTokenPayload): string {
   const secret = process.env.JWT_SECRET;
@@ -147,6 +160,7 @@ export async function register(req: AuthRequest, res: Response) {
   }
 
   const password_hash = await bcrypt.hash(password, 10);
+  const skipVerify = skipEmailVerification();
   const user = await prisma.user.create({
     data: {
       name,
@@ -154,9 +168,13 @@ export async function register(req: AuthRequest, res: Response) {
       phone,
       password_hash,
       role,
-      email_verified: false,
+      email_verified: skipVerify,
     },
   });
+
+  if (skipVerify) {
+    return sendSuccess(res, { emailSent: false }, REGISTER_READY_MESSAGE, 201);
+  }
 
   const raw = crypto.randomBytes(32).toString('hex');
   await prisma.emailVerificationToken.create({
@@ -167,32 +185,19 @@ export async function register(req: AuthRequest, res: Response) {
     },
   });
 
-  const payload: { verifyUrl?: string } = {};
   try {
     await sendVerificationEmail(user.email, raw);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Could not send verification email';
-    if (process.env.NODE_ENV !== 'production') {
-      payload.verifyUrl = verifyEmailUrl(raw);
-    }
-    return sendSuccess(
-      res,
-      payload,
-      `${message} Your account was created — use Resend confirmation on the login page.`,
-      201
-    );
+    const detail = err instanceof Error ? err.message : 'Could not send verification email';
+    console.warn('[auth] verification email not sent; auto-verifying signup', detail);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { email_verified: true },
+    });
+    return sendSuccess(res, { emailSent: false }, REGISTER_READY_MESSAGE, 201);
   }
 
-  if (process.env.NODE_ENV !== 'production' && !isMailConfigured()) {
-    payload.verifyUrl = verifyEmailUrl(raw);
-  }
-
-  return sendSuccess(
-    res,
-    payload,
-    'Check your email to confirm your account before logging in.',
-    201
-  );
+  return sendSuccess(res, { emailSent: true }, REGISTER_CHECK_EMAIL_MESSAGE, 201);
 }
 
 export async function login(req: AuthRequest, res: Response) {
@@ -221,7 +226,7 @@ export async function login(req: AuthRequest, res: Response) {
     return sendError(res, 'Invalid email or password', 401);
   }
 
-  if (!user.email_verified) {
+  if (!user.email_verified && !skipEmailVerification()) {
     return sendError(res, 'Confirm your email before logging in. Check your inbox.', 403);
   }
 
@@ -234,9 +239,12 @@ export async function forgotPassword(req: AuthRequest, res: Response) {
     return sendError(res, 'Enter a valid email', 400, parsed.error.message);
   }
 
+  if (skipEmailVerification() || !isMailConfigured()) {
+    return sendError(res, DEMO_RESET_UNAVAILABLE, 503);
+  }
+
   const email = parsed.data.email.toLowerCase();
   const user = await prisma.user.findUnique({ where: { email } });
-  const payload: { resetUrl?: string } = {};
 
   if (user) {
     const raw = crypto.randomBytes(32).toString('hex');
@@ -251,32 +259,16 @@ export async function forgotPassword(req: AuthRequest, res: Response) {
       data: { user_id: user.id, token_hash, expires_at },
     });
 
-    const isProd = process.env.NODE_ENV === 'production';
-    let mailed = false;
-    if (isMailConfigured()) {
-      try {
-        await sendPasswordResetEmail(user.email, raw);
-        mailed = true;
-      } catch (err) {
-        if (isProd) {
-          const message =
-            err instanceof Error ? err.message : 'Could not send reset email. Try again later.';
-          return sendError(res, message, 502);
-        }
-      }
-    } else if (isProd) {
-      return sendError(res, 'Could not send reset email. Try again later.', 502);
-    }
-
-    if (!isProd) {
-      payload.resetUrl = resetPasswordUrl(raw);
-      if (!mailed) {
-        console.warn('[auth] reset email not sent; returning resetUrl for local/demo');
-      }
+    try {
+      await sendPasswordResetEmail(user.email, raw);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : 'Could not send reset email';
+      console.error('[auth] reset email failed', detail);
+      return sendError(res, DEMO_RESET_UNAVAILABLE, 503);
     }
   }
 
-  return sendSuccess(res, payload, GENERIC_RESET_MESSAGE);
+  return sendSuccess(res, {}, GENERIC_RESET_MESSAGE);
 }
 
 export async function resetPassword(req: AuthRequest, res: Response) {
@@ -456,8 +448,14 @@ export async function resendVerification(req: AuthRequest, res: Response) {
   }
   const email = parsed.data.email.toLowerCase();
   const user = await prisma.user.findUnique({ where: { email } });
-  const payload: { verifyUrl?: string } = {};
   if (user && !user.email_verified && user.password_hash) {
+    if (skipEmailVerification()) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { email_verified: true },
+      });
+      return sendSuccess(res, {}, REGISTER_READY_MESSAGE);
+    }
     const raw = crypto.randomBytes(32).toString('hex');
     await prisma.emailVerificationToken.updateMany({
       where: { user_id: user.id, used_at: null },
@@ -473,14 +471,16 @@ export async function resendVerification(req: AuthRequest, res: Response) {
     try {
       await sendVerificationEmail(user.email, raw);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Could not send verification email';
-      return sendError(res, message, 502);
-    }
-    if (process.env.NODE_ENV !== 'production' && !isMailConfigured()) {
-      payload.verifyUrl = verifyEmailUrl(raw);
+      const detail = err instanceof Error ? err.message : 'Could not send verification email';
+      console.warn('[auth] resend verification failed; auto-verifying', detail);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { email_verified: true },
+      });
+      return sendSuccess(res, {}, REGISTER_READY_MESSAGE);
     }
   }
-  return sendSuccess(res, payload, 'If that account needs confirmation, we sent a new link.');
+  return sendSuccess(res, {}, 'If that account needs confirmation, we sent a new link.');
 }
 
 export async function logout(req: AuthRequest, res: Response) {

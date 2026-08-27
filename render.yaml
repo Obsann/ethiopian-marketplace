@@ -52,7 +52,12 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
-      # Prefer Resend on Render (SMTP outbound is often blocked).
+      # Hackathon/demo without a verified mail domain. Set "true" on suqet-api (no domain needed):
+      # signups can log in immediately; password reset email is unavailable. Turn off when
+      # EMAIL_FROM is an address on a Resend-verified domain.
+      - key: SKIP_EMAIL_VERIFICATION
+        value: "true"
+      # Prefer Resend on Render (SMTP outbound is often blocked). Optional until you have a domain.
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM
