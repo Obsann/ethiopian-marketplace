@@ -14,7 +14,13 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { Alert } from '@/components/ui/Alert';
 import { CATEGORY_PHOTOS, DEMO_CATALOG, UI_PHOTOS } from '@/lib/uiPhotos';
-import { catalogAsListing, demoListingPath, FALLBACK_CATEGORIES, pinAmharicBooksFirst } from '@/lib/demoCatalog';
+import {
+  catalogAsListing,
+  demoListingPath,
+  FALLBACK_CATEGORIES,
+  orderShopCategories,
+  pinAmharicBooksFirst,
+} from '@/lib/demoCatalog';
 import { getRecent, recentAsListing } from '@/lib/recent';
 
 function categoryPhoto(name: string) {
@@ -51,7 +57,7 @@ export default function HomePage() {
   const featured = ordered.slice(0, 3);
   const trending = ordered.slice(0, 8);
   const arrivals = ordered.slice(0, 8);
-  const cats = categories.length ? categories : FALLBACK_CATEGORIES;
+  const cats = orderShopCategories(categories.length ? categories : FALLBACK_CATEGORIES);
 
   return (
     <div className="bg-paper">
@@ -142,15 +148,17 @@ export default function HomePage() {
               <Link
                 key={cat.id}
                 href={`/listings?category_id=${encodeURIComponent(cat.id)}&category=${encodeURIComponent(cat.name)}`}
-                className="group relative block min-w-[70vw] snap-start overflow-hidden rounded-xl bg-ink sm:min-w-[18rem]"
+                className="group relative block w-[70vw] max-w-[18rem] shrink-0 snap-start overflow-hidden rounded-xl bg-ink sm:w-[18rem]"
               >
-                <div className="relative aspect-[4/5]">
+                <div className="relative aspect-[4/5] w-full min-w-0 max-w-full overflow-hidden">
                   <SafeImage
                     src={categoryPhoto(cat.name)}
                     alt=""
                     fill
                     sizes="(max-width:640px) 70vw, 18rem"
-                    className="object-cover opacity-80 transition duration-700 group-hover:scale-105"
+                    className={`h-full w-full max-w-full object-cover opacity-80 transition duration-700 group-hover:scale-105 ${
+                      cat.name === 'Clothing' ? 'object-top' : 'object-center'
+                    }`}
                   />
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/20 to-transparent" />
@@ -230,12 +238,18 @@ export default function HomePage() {
             <Carousel label="Trending listings">
               {(trending.length > 0
                 ? trending.map((l) => (
-                    <div key={l.id} className="min-w-[72vw] sm:min-w-[16rem] lg:min-w-[18rem]">
+                    <div
+                      key={l.id}
+                      className="w-[72vw] max-w-[18rem] shrink-0 overflow-hidden sm:w-[16rem] lg:w-[18rem] lg:max-w-none"
+                    >
                       <ListingCard listing={l} size="compact" />
                     </div>
                   ))
                 : DEMO_CATALOG.slice(0, 10).map((item, i) => (
-                    <div key={item.title} className="min-w-[72vw] sm:min-w-[16rem] lg:min-w-[18rem]">
+                    <div
+                      key={item.title}
+                      className="w-[72vw] max-w-[18rem] shrink-0 overflow-hidden sm:w-[16rem] lg:w-[18rem] lg:max-w-none"
+                    >
                       <ListingCard listing={catalogAsListing(item, i)} href={demoListingPath(i)} size="compact" />
                     </div>
                   )))}

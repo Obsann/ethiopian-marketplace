@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
-import { Menu, Search, X } from 'lucide-react';
+import { Heart, Menu, MessageSquare, Search, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useUnreadMessages } from '@/lib/unreadMessages';
+import { AccountMenu } from './AccountMenu';
 import { Button } from './ui/Button';
 import { NotificationsMenu } from './NotificationsMenu';
 import { UnreadBadge } from './UnreadBadge';
@@ -41,6 +42,10 @@ export function Navbar() {
     solid
       ? 'text-xs font-semibold uppercase tracking-[0.16em] text-ink/70 transition hover:text-ink'
       : 'text-xs font-semibold uppercase tracking-[0.16em] text-white/75 transition hover:text-white';
+  const iconBtn = solid
+    ? 'relative rounded-lg p-2 text-muted transition hover:bg-stone-100 hover:text-ink'
+    : 'relative rounded-lg p-2 text-white/80 transition hover:bg-white/10 hover:text-white';
+  const canSell = user?.role === 'seller' || user?.role === 'admin';
 
   return (
     <header
@@ -53,7 +58,7 @@ export function Navbar() {
         <span className="flex-1 bg-et-yellow" />
         <span className="flex-1 bg-et-red" />
       </div>
-      <div className="page-shell flex h-16 items-center gap-4 sm:h-20">
+      <div className="page-shell flex h-16 items-center gap-3 sm:h-20 sm:gap-4">
         <Link
           href="/"
           className={`notranslate shrink-0 font-display text-2xl font-medium tracking-tight sm:text-3xl ${
@@ -63,39 +68,23 @@ export function Navbar() {
           Suq<span className="text-accent-500">ET</span>
         </Link>
 
-        <nav className="ml-6 hidden items-center gap-6 lg:flex" aria-label="Main">
+        <nav className="ml-4 hidden items-center gap-5 lg:flex" aria-label="Main">
           <Link href="/listings" className={link}>
             Shop
           </Link>
           <Link href="/new" className={link}>
             New
           </Link>
-          <Link href="/saved" className={link}>
-            Saved
-          </Link>
-          {!isLoading && user?.role === 'seller' && (
-            <Link href="/sell" className={link}>
-              Sell
-            </Link>
-          )}
-          {!isLoading && (user?.role === 'seller' || user?.role === 'admin') && (
-            <Link href="/dashboard" className={link}>
-              Dashboard
-            </Link>
-          )}
-          {!isLoading && user?.role === 'admin' && (
-            <Link href="/admin" className={link}>
-              Admin
-            </Link>
-          )}
-          {!isLoading && user && (
+          {!isLoading && canSell && (
             <Link
-              href="/inbox"
-              className={`relative inline-flex items-center ${link}`}
-              aria-label={unreadMessages > 0 ? `Inbox, ${unreadMessages} unread` : 'Inbox'}
+              href="/sell"
+              className={`rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] ${
+                solid
+                  ? 'bg-ink text-white hover:bg-ink/90'
+                  : 'border border-white/40 bg-white/10 text-white hover:bg-white hover:text-ink'
+              }`}
             >
-              Inbox
-              <UnreadBadge count={unreadMessages} inverted={!solid} />
+              Sell
             </Link>
           )}
         </nav>
@@ -125,9 +114,24 @@ export function Navbar() {
           </div>
         </form>
 
-        <div className="ml-auto flex items-center gap-1 sm:gap-2">
-          <div id="google_translate_header_target" className="hidden max-w-[8.5rem] sm:flex" />
+        <div className="ml-auto flex items-center gap-0.5 sm:gap-1">
+          <div id="google_translate_header_target" className="hidden max-w-[7rem] shrink-0 sm:flex" />
           {isLoading && <span className="h-8 w-16 animate-pulse bg-stone-200/40" aria-hidden />}
+          <Link href="/saved" className={`inline-flex ${iconBtn}`} aria-label="Saved">
+            <Heart className="h-5 w-5" aria-hidden strokeWidth={1.8} />
+          </Link>
+          {!isLoading && user && (
+            <Link
+              href="/inbox"
+              className={`hidden md:inline-flex ${iconBtn}`}
+              aria-label={unreadMessages > 0 ? `Inbox, ${unreadMessages} unread` : 'Inbox'}
+            >
+              <span className="relative">
+                <MessageSquare className="h-5 w-5" aria-hidden strokeWidth={1.8} />
+                <UnreadBadge count={unreadMessages} inverted={!solid} />
+              </span>
+            </Link>
+          )}
           {!isLoading && user && <NotificationsMenu inverted={!solid} />}
           {!isLoading && !user && (
             <>
@@ -146,27 +150,7 @@ export function Navbar() {
               </Link>
             </>
           )}
-          {!isLoading && user && (
-            <>
-              <Link
-                href="/account"
-                className={`hidden px-2 py-2 text-xs font-semibold uppercase tracking-[0.14em] md:inline ${
-                  solid ? 'text-ink/70 hover:text-ink' : 'text-white/80 hover:text-white'
-                }`}
-              >
-                Account
-              </Link>
-              <button
-                type="button"
-                onClick={() => void logout()}
-                className={`hidden px-2 py-2 text-xs font-semibold uppercase tracking-[0.14em] md:inline ${
-                  solid ? 'text-ink/70 hover:text-ink' : 'text-white/80 hover:text-white'
-                }`}
-              >
-                Log out
-              </button>
-            </>
-          )}
+          {!isLoading && user && <AccountMenu inverted={!solid} />}
           <button
             type="button"
             className={`rounded-lg p-2 lg:hidden ${solid ? 'text-ink' : 'text-white'}`}
@@ -193,24 +177,27 @@ export function Navbar() {
           </form>
           <nav className="flex flex-col gap-3 text-sm font-semibold uppercase tracking-[0.16em]" aria-label="Mobile">
             <Link href="/listings">Shop</Link>
-            <Link href="/new">New arrivals</Link>
+            <Link href="/new">New</Link>
             <Link href="/saved">Saved</Link>
-            {user && (
-              <Link href="/inbox" className="relative inline-flex items-center gap-2">
-                Inbox
-                {unreadMessages > 0 && (
-                  <span className="bg-accent-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                    {unreadMessages > 9 ? '9+' : unreadMessages}
-                  </span>
-                )}
-              </Link>
-            )}
-            {user && <Link href="/orders">Orders</Link>}
-            {user?.role === 'seller' && <Link href="/sell">Sell</Link>}
-            {(user?.role === 'seller' || user?.role === 'admin') && <Link href="/dashboard">Dashboard</Link>}
-            {user?.role === 'admin' && <Link href="/admin">Admin</Link>}
-            {user ? <Link href="/account">Account</Link> : <Link href="/auth/login">Log in</Link>}
+            {canSell && <Link href="/sell">Sell</Link>}
           </nav>
+          <div className="mt-5 flex flex-col gap-2 border-t border-border pt-4 text-sm text-ink">
+            {user ? (
+              <>
+                <Link href="/account">Account</Link>
+                {canSell && <Link href="/dashboard">Dashboard</Link>}
+                {user.role === 'admin' && <Link href="/admin" className="text-muted">Admin</Link>}
+                <button type="button" className="cursor-pointer text-left" onClick={() => void logout()}>
+                  Log out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/auth/login">Log in</Link>
+                <Link href="/auth/register">Join</Link>
+              </>
+            )}
+          </div>
         </div>
       )}
     </header>

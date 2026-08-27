@@ -18,6 +18,17 @@ export const FALLBACK_CATEGORIES: Category[] = Object.entries(DEMO_CATEGORY_IDS)
   name,
 }));
 
+/** Catalog order (Electronics first). API `/categories` is A–Z, which puts Books + Clothing on the left. */
+export function orderShopCategories(cats: Category[]): Category[] {
+  const rank = new Map(Object.keys(DEMO_CATEGORY_IDS).map((name, i) => [name.toLowerCase(), i]));
+  return [...cats].sort((a, b) => {
+    const ra = rank.get(a.name.toLowerCase()) ?? 1000;
+    const rb = rank.get(b.name.toLowerCase()) ?? 1000;
+    if (ra !== rb) return ra - rb;
+    return a.name.localeCompare(b.name);
+  });
+}
+
 export const DEMO_SELLERS: Record<
   DemoSellerKey,
   { id: string; name: string; is_verified: boolean; created_at: string; role: 'seller' }
