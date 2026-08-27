@@ -17,7 +17,7 @@ Sellers list items with photos, price, and meetup or delivery options, then run 
 - [Architecture](#-architecture)
 - [Quick Start](#-quick-start)
 - [Project Structure](#-project-structure)
-- [API Endpoints](#-api-endpoints)
+- [Features and API endpoints](#-features-and-api-endpoints)
 - [Authentication](#-authentication)
 - [Database](#-database)
 - [Contributing](#-contributing)
@@ -136,105 +136,104 @@ ethiopian-marketplace/
         └── utils/              # Chapa, Cloudinary, mail, upload
 ```
 
-## 🔌 API Endpoints
+## 🔌 Features and API endpoints
 
-Prefix: `/api`. Auth column: public, JWT, or role-gated.
+Prefix: `/api`. Auth: public, JWT, or role-gated (`seller` / `admin`).
 
 ### Health
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/api/health` | Public | Liveness |
+Operators and the hosted app ping this route to confirm the API is up. It is the same check used in production (`GET /api/health` on Render).
+
+- `GET /api/health` — public, liveness
+- `POST /api/health` — public, same as GET
 
 ### Auth
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/api/auth/providers` | Public | Available login providers |
-| POST | `/api/auth/register` | Public | Create account (`buyer` or `seller`) |
-| POST | `/api/auth/login` | Public | Email + password |
-| POST | `/api/auth/logout` | Public | Clear session |
-| GET | `/api/auth/me` | Optional | Current user |
-| PATCH | `/api/auth/me` | JWT | Update profile |
-| POST | `/api/auth/forgot-password` | Public | Password reset request |
-| POST | `/api/auth/reset-password` | Public | Apply reset token |
-| POST | `/api/auth/verify-email` | Public | Confirm email token |
-| POST | `/api/auth/resend-verification` | Public | Resend confirmation |
-| GET | `/api/auth/google` | Public | Start Google OAuth |
-| GET | `/api/auth/google/callback` | Public | Google OAuth callback |
-| POST | `/api/auth/oauth/exchange` | Public | Exchange OAuth code for session |
+A person joins as a **buyer** or **seller** with email and password, or continues with Google when that provider is configured. They can update their profile, recover a forgotten password, and confirm their email from a link. The session is a JWT, sent as `Authorization: Bearer` or the httpOnly `etm_sid` cookie. Logout clears it.
+
+- `GET /api/auth/providers` — public, available login providers
+- `POST /api/auth/register` — public, create account (`buyer` or `seller`)
+- `POST /api/auth/login` — public, email + password
+- `POST /api/auth/logout` — public, clear session
+- `GET /api/auth/me` — optional auth, current user
+- `PATCH /api/auth/me` — JWT, update profile
+- `POST /api/auth/forgot-password` — public, password reset request
+- `POST /api/auth/reset-password` — public, apply reset token
+- `POST /api/auth/verify-email` — public, confirm email token
+- `POST /api/auth/resend-verification` — public, resend confirmation
+- `GET /api/auth/google` — public, start Google OAuth
+- `GET /api/auth/google/callback` — public, Google OAuth callback
+- `POST /api/auth/oauth/exchange` — public, exchange OAuth code for session
 
 ### Listings
 
-Query on list/search: `page`, `limit`, `query`, `category_id`, `condition` (`new` \| `like_new` \| `good` \| `fair`), `location`, `min_price`, `max_price`, `sort` (`newest` \| `price_asc` \| `price_desc`).
+Buyers browse a searchable catalog in ETB — photos, condition, category, location, meetup or delivery — and open a listing for detail, similar items, and any price offers. Sellers (or admins) post an item with up to five photos, then edit or remove their own listings from the dashboard. A signed-in buyer can save a listing for later or send a price offer, which is tied to the same conversation as chat.
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/api/listings` | Public | Paginated catalog |
-| GET | `/api/listings/categories` | Public | Categories |
-| GET | `/api/listings/:id` | Public | Listing detail |
-| GET | `/api/listings/:id/similar` | Public | Similar listings |
-| GET | `/api/listings/:id/offers` | Public | Offers on a listing |
-| POST | `/api/listings` | seller, admin | Create (multipart, up to 5 images) |
-| PUT | `/api/listings/:id` | owner / admin | Update |
-| DELETE | `/api/listings/:id` | owner / admin | Remove |
-| POST | `/api/listings/:id/offer` | JWT | Make an offer |
-| POST | `/api/listings/:id/save` | JWT | Save listing |
-| DELETE | `/api/listings/:id/save` | JWT | Unsave listing |
-| GET | `/api/search` | Public | Full-text search (`query` or `q`) |
+List and search accept `page`, `limit`, `query` (search also accepts `q`), `category_id`, `condition` (`new` | `like_new` | `good` | `fair`), `location`, `min_price`, `max_price`, and `sort` (`newest` | `price_asc` | `price_desc`).
+
+- `GET /api/listings` — public, paginated catalog
+- `GET /api/listings/categories` — public, categories
+- `GET /api/listings/:id` — public, listing detail
+- `GET /api/listings/:id/similar` — public, similar listings
+- `GET /api/listings/:id/offers` — public, offers on a listing
+- `POST /api/listings` — seller or admin, create (multipart, up to 5 images)
+- `PUT /api/listings/:id` — owner or admin, update
+- `DELETE /api/listings/:id` — owner or admin, remove
+- `POST /api/listings/:id/offer` — JWT, make an offer
+- `POST /api/listings/:id/save` — JWT, save listing
+- `DELETE /api/listings/:id/save` — JWT, unsave listing
+- `GET /api/search` — public, full-text search
 
 ### Marketplace
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/api/sellers/:id` | Public | Public seller profile + reviews |
-| GET | `/api/saved` | JWT | Saved listings |
-| POST | `/api/reviews` | JWT | Review after a completed purchase |
+Before buying, a person can open a seller's public profile — active listings, ratings, and reviews — to see who they are dealing with. They keep a personal list of saved listings and return to it when they are ready to message or pay. After a purchase is completed (payment released), the buyer can leave one review for that listing.
+
+- `GET /api/sellers/:id` — public, seller profile + reviews
+- `GET /api/saved` — JWT, saved listings
+- `POST /api/reviews` — JWT, review after a completed purchase
 
 ### Chat
 
-Conversations are per listing with the seller. `GET /api/messages/:listing_id` requires `?with=<userId>`.
+Each listing has a conversation with the seller: questions about the item, price offers, and agreeing on meetup or delivery. Both sides use an inbox of those threads; unread counts and in-app notifications keep them current. Sellers (and admins) also get a dashboard that brings listings, conversations, and orders together. Messages are posted over REST; Socket.io fans them out live (typing, Seen, presence).
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/api/messages` | JWT | Send a message |
-| POST | `/api/messages/:listing_id` | JWT | Send a message on a listing |
-| GET | `/api/messages/:listing_id` | JWT | Conversation (`?with=`) |
-| GET | `/api/conversations` | JWT | Inbox |
-| GET | `/api/unread-messages` | JWT | Unread count |
-| GET | `/api/notifications` | JWT | In-app notifications |
-| PATCH | `/api/notifications/:id/read` | JWT | Mark notification read |
-| GET | `/api/dashboard` | seller, admin | Seller dashboard |
+`GET /api/messages/:listing_id` requires `?with=<userId>`.
+
+- `POST /api/messages` — JWT, send a message
+- `POST /api/messages/:listing_id` — JWT, send a message on a listing
+- `GET /api/messages/:listing_id` — JWT, conversation (`?with=`)
+- `GET /api/conversations` — JWT, inbox
+- `GET /api/unread-messages` — JWT, unread count
+- `GET /api/notifications` — JWT, in-app notifications
+- `PATCH /api/notifications/:id/read` — JWT, mark notification read
+- `GET /api/dashboard` — seller or admin, seller dashboard
 
 ### Payments (Buy now)
 
-No cart. Initialize against a listing; Chapa holds funds until release.
+When they are ready, the buyer pays for that listing in-app through Chapa. Funds are held until the seller confirms handover — an escrow-style hold, not an instant payout. The seller then marks the payment released; the buyer or an admin can refund a held payment, which puts the listing back on the market. Both sides can see their transactions. Chapa confirms checkout via callback and verify routes.
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/api/payments/initialize` | JWT | Start Chapa checkout |
-| POST | `/api/payments/sync` | JWT | Sync status after return |
-| GET | `/api/payments/mine` | JWT | My transactions |
-| POST | `/api/payments/release/:transaction_id` | JWT | Seller confirms delivery |
-| POST | `/api/payments/refund/:transaction_id` | JWT | Refund a held payment |
-| GET/POST | `/api/payments/callback` | Chapa | Checkout callback |
-| GET/POST | `/api/payments/verify` | Chapa | Webhook / verify |
+- `POST /api/payments/initialize` — JWT, start Chapa checkout
+- `POST /api/payments/sync` — JWT, sync status after return
+- `GET /api/payments/mine` — JWT, my transactions
+- `POST /api/payments/release/:transaction_id` — JWT, seller confirms delivery
+- `POST /api/payments/refund/:transaction_id` — JWT, refund a held payment
+- `GET` / `POST /api/payments/callback` — Chapa checkout callback
+- `GET` / `POST /api/payments/verify` — Chapa webhook / verify
 
 ### Reports & KYC
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/api/reports` | JWT | Report a listing or user |
-| GET | `/api/reports` | admin | List reports |
-| PATCH | `/api/reports/:id` | admin | Resolve / dismiss |
-| POST | `/api/verifications/submit` | JWT | Submit ID + face photos |
-| GET | `/api/verifications/pending` | admin | Pending KYC |
-| GET | `/api/verifications/:id/images/:kind` | admin | Stream KYC image |
-| PATCH | `/api/verifications/:id/review` | admin | Approve / reject KYC |
+Sellers submit ID and face photos so admin can verify them before they are treated as trusted on the marketplace. Anyone signed in can report a listing or a user. Admins review pending KYC (including the uploaded images) and open reports, then approve, reject, resolve, or dismiss.
+
+- `POST /api/reports` — JWT, report a listing or user
+- `GET /api/reports` — admin, list reports
+- `PATCH /api/reports/:id` — admin, resolve / dismiss
+- `POST /api/verifications/submit` — JWT, submit ID + face photos
+- `GET /api/verifications/pending` — admin, pending KYC
+- `GET /api/verifications/:id/images/:kind` — admin, stream KYC image
+- `PATCH /api/verifications/:id/review` — admin, approve / reject KYC
 
 ### WebSocket (Socket.io)
 
-JWT required (`auth.token`, `Authorization: Bearer`, or `etm_sid` cookie). Client connects to the API origin.
+While a conversation is open, both people see typing indicators, online presence, and Seen receipts without refreshing. New messages, notifications, and unread counts arrive on the same connection. The client connects to the API origin with a JWT (`auth.token`, `Authorization: Bearer`, or `etm_sid` cookie). Messages themselves are sent over REST (`POST /api/messages`); the socket layer fans them out as `receive_message`.
 
 **Client → server**
 
@@ -257,8 +256,6 @@ JWT required (`auth.token`, `Authorization: Bearer`, or `etm_sid` cookie). Clien
 | `online_users` | Currently online user IDs |
 | `user_online` / `user_offline` | Presence change |
 | `user_typing` / `user_stop_typing` | Typing indicator |
-
-Messages themselves are sent over REST (`POST /api/messages`); the socket layer fans them out as `receive_message`.
 
 ## 🔐 Authentication
 
