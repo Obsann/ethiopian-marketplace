@@ -106,7 +106,7 @@ function ChatView() {
 
   return (
     <div className="page-shell pt-24 sm:pt-28 pb-16">
-      <div className="flex h-[calc(100vh-9rem)] flex-col overflow-hidden border border-border bg-surface">
+      <div className="flex h-[calc(100svh-9rem)] min-h-[20rem] flex-col overflow-hidden border border-border bg-surface">
         <div className="border-b border-border px-4 py-4 sm:px-5">
           <h1 className="font-display text-2xl font-medium text-ink">
             {listing ? listing.title : 'Chat'}

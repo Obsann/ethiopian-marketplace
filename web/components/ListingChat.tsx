@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { connectSocket } from '@/lib/socket';
 import { useAuth } from '@/lib/auth';
@@ -37,7 +37,8 @@ export function ListingChat({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [peerTyping, setPeerTyping] = useState(false);
-  const bottom = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  const stickToBottom = useRef(true);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { isOnline, lastSeenAt } = usePeerPresence(peerId, {
     is_online: initialOnline,
@@ -99,9 +100,17 @@ export function ListingChat({
     };
   }, [token, user, listingId, peerId]);
 
-  useEffect(() => {
-    bottom.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [thread.length, peerTyping]);
+  function onMessagesScroll() {
+    const el = scroller.current;
+    if (!el) return;
+    stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight <= 80;
+  }
+
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (!el || !stickToBottom.current) return;
+    el.scrollTop = el.scrollHeight;
+  }, [thread.length]);
 
   function emitTyping(next: string) {
     if (!user) return;
@@ -133,6 +142,7 @@ export function ListingChat({
           content: draft.trim(),
         }),
       });
+      stickToBottom.current = true;
       setThread((rows) => (rows.some((m) => m.id === res.data.id) ? rows : [...rows, res.data]));
       setDraft('');
     } catch (err) {
@@ -159,10 +169,12 @@ export function ListingChat({
   const threadUi = (
     <>
       <div
+        ref={scroller}
+        onScroll={onMessagesScroll}
         className={
           variant === 'full'
-            ? 'flex-1 space-y-2 overflow-y-auto bg-paper px-3 py-4 text-sm sm:px-5'
-            : 'max-h-[min(60vh,28rem)] space-y-2 overflow-y-auto bg-paper p-3 text-sm'
+            ? 'min-h-[12rem] flex-1 space-y-2 overflow-y-auto overscroll-contain bg-paper px-3 py-4 text-sm sm:px-5'
+            : 'h-72 min-h-[16rem] max-h-[28rem] space-y-2 overflow-y-auto overscroll-contain bg-paper p-3 text-sm'
         }
       >
         {thread.map((m) => {
@@ -184,12 +196,13 @@ export function ListingChat({
           );
         })}
         {thread.length === 0 && <p className="text-muted">No messages yet.</p>}
-        {peerTyping && (
-          <p className="text-xs text-muted" aria-live="polite">
-            {who} is typing…
-          </p>
-        )}
-        <div ref={bottom} />
+        <div className="min-h-[1.25rem]" aria-live="polite">
+          {peerTyping ? (
+            <p className="text-xs text-muted">
+              {who} is typing…
+            </p>
+          ) : null}
+        </div>
       </div>
       {error && <Alert tone="error">{error}</Alert>}
       <form
