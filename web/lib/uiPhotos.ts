@@ -8,7 +8,7 @@ export const UI_PHOTOS = {
   table: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787781698/suqet/ui/coffee-table.jpg',
   books: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787785916/suqet/ui/amharic-books.jpg',
   helmet: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787781723/suqet/ui/moto-helmet.jpg',
-  mitad: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787781701/suqet/ui/injera-mitad.jpg',
+  mitad: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787788981/suqet/ui/injera-mitad.jpg',
   toolbox: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787781702/suqet/ui/toolbox.jpg',
   laptop: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787781702/suqet/ui/hp-laptop.jpg',
   bike: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787781703/suqet/ui/kids-bike.jpg',

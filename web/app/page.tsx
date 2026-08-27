@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowDownRight, ArrowRight, Search } from 'lucide-react';
@@ -47,15 +47,10 @@ export default function HomePage() {
     router.push(q ? `/listings?query=${encodeURIComponent(q)}` : '/listings');
   }
 
-  const heroListing = listings[0];
   const featured = listings.slice(0, 3);
   const trending = listings.slice(0, 8);
   const arrivals = listings.slice(3, 9);
   const cats = categories.length ? categories : FALLBACK_CATEGORIES;
-
-  const heroImage = useMemo(() => {
-    return heroListing?.primary_image || heroListing?.images?.[0] || UI_PHOTOS.hero;
-  }, [heroListing]);
 
   return (
     <div className="bg-paper">
@@ -63,7 +58,7 @@ export default function HomePage() {
       <section className="relative min-h-[100svh] overflow-hidden bg-ink text-white">
         <div className="absolute inset-0">
           <SafeImage
-            src={heroImage}
+            src={UI_PHOTOS.hero}
             alt=""
             fill
             priority
@@ -259,7 +254,7 @@ export default function HomePage() {
         <div className="grid lg:grid-cols-2">
           <div className="relative min-h-[22rem] bg-stone-300 lg:min-h-[32rem]">
             <SafeImage
-              src={listings[1]?.primary_image || listings[1]?.images?.[0] || UI_PHOTOS.sell}
+              src={UI_PHOTOS.sell}
               alt=""
               fill
               className="object-cover"

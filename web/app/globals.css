@@ -75,11 +75,11 @@ body {
   }
 
   .product-tray {
-    @apply columns-2 gap-x-4 md:columns-3 md:gap-x-6;
+    @apply grid grid-cols-2 items-start gap-x-4 gap-y-6 md:grid-cols-3 md:gap-x-6 md:gap-y-8;
   }
 
   .product-tray > * {
-    @apply mb-4 break-inside-avoid md:mb-6;
+    @apply min-w-0 w-full max-w-full;
   }
 
   .carousel-track::-webkit-scrollbar {

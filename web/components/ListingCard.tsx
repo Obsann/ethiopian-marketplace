@@ -56,31 +56,33 @@ export function ListingCard({
   const objectPos = listing.category?.name === 'Clothing' ? 'object-top' : 'object-center';
 
   return (
-    <article className="group relative w-full break-inside-avoid snap-start">
-      <Link href={href || `/listings/${listing.id}`} className="block cursor-pointer outline-none">
+    <article className="group relative w-full min-w-0 max-w-full snap-start">
+      <Link href={href || `/listings/${listing.id}`} className="block min-w-0 max-w-full cursor-pointer outline-none">
         <div
-          className={`relative w-full overflow-hidden rounded-xl bg-stone-200 ${mediaAspectClass(listing, size)} ${mediaMaxHeightClass(size)}`}
+          className={`relative w-full min-w-0 max-w-full overflow-hidden rounded-xl bg-stone-200 ${mediaMaxHeightClass(size)}`}
         >
-          <SafeImage
-            src={primary}
-            alt={listing.title}
-            fill
-            priority={priority}
-            sizes={size === 'featured' ? '420px' : '(max-width:640px) 50vw, 33vw'}
-            className={`object-cover ${objectPos} transition duration-700 ease-out group-hover:scale-[1.04] ${
-              secondary ? 'group-hover:opacity-0' : ''
-            }`}
-          />
-          {secondary && (
+          <div className={`relative w-full ${mediaAspectClass(listing, size)}`}>
             <SafeImage
-              src={secondary}
-              alt=""
+              src={primary}
+              alt={listing.title}
               fill
-              sizes="(max-width:640px) 50vw, 33vw"
-              className={`object-cover ${objectPos} opacity-0 transition duration-700 group-hover:opacity-100`}
-              aria-hidden
+              priority={priority}
+              sizes={size === 'featured' ? '420px' : '(max-width:640px) 50vw, 33vw'}
+              className={`object-cover ${objectPos} transition duration-700 ease-out group-hover:scale-[1.04] ${
+                secondary ? 'group-hover:opacity-0' : ''
+              }`}
             />
-          )}
+            {secondary && (
+              <SafeImage
+                src={secondary}
+                alt=""
+                fill
+                sizes="(max-width:640px) 50vw, 33vw"
+                className={`object-cover ${objectPos} opacity-0 transition duration-700 group-hover:opacity-100`}
+                aria-hidden
+              />
+            )}
+          </div>
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/35 via-transparent to-transparent opacity-80" />
           {listing.seller?.is_verified && (
             <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-ink backdrop-blur-sm">

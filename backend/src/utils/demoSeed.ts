@@ -100,7 +100,7 @@ const PRODUCTS = [
     category: 'Kitchen',
     location: 'Bahir Dar',
     seller: 'tigist' as const,
-    image: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787781701/suqet/ui/injera-mitad.jpg',
+    image: 'https://res.cloudinary.com/dfghwzinf/image/upload/v1787788981/suqet/ui/injera-mitad.jpg',
     meetup_ok: true,
     delivery_ok: false,
     delivery_fee: null,
